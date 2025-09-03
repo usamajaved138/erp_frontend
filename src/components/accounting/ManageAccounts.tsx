@@ -14,6 +14,7 @@ interface Account {
   account_name: string;
   account_type: string;
   parent_account_id: number | null;
+  level_no: number;
 }
 
 const ChartOfAccounts: React.FC = () => {
@@ -139,6 +140,7 @@ const ChartOfAccounts: React.FC = () => {
                       <button
                         onClick={() => handleAddAccount(account.account_id)}
                         className="text-blue-600 hover:underline cursor-pointer font-medium"
+                        style={{ paddingLeft: `${account.level_no * 20}px` }}
                       >
                         {account.account_name}
                       </button>

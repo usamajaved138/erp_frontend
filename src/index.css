@@ -130,3 +130,9 @@
 .markdown-preview ol {
   @apply my-4 ml-6;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

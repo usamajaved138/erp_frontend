@@ -7,6 +7,7 @@ import VendorMaster from '../purchasing/VendorMaster';
 import RFQManagement from '../purchasing/RFQManagement';
 import PurchaseOrders from '../purchasing/PurchaseOrders';
 import GoodsReceipt from '../purchasing/GoodsReceipt';
+import PurchaseRequisition from '../purchasing/PurchaseRequisition';
 
 const PurchasingModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -27,7 +28,7 @@ const PurchasingModule: React.FC = () => {
 
   const quickActions = [
     { label: 'Add Vendor', action: () => setActiveTab('vendors'), color: 'bg-blue-500' },
-    { label: 'Create RFQ', action: () => setActiveTab('rfq'), color: 'bg-green-500' },
+    { label: 'Create PR', action: () => setActiveTab('purchase-requisition'), color: 'bg-green-500' },
     { label: 'New PO', action: () => setActiveTab('purchase-orders'), color: 'bg-orange-500' },
     { label: 'Process GRN', action: () => setActiveTab('goods-receipt'), color: 'bg-purple-500' }
   ];
@@ -42,13 +43,17 @@ const PurchasingModule: React.FC = () => {
       </div>
 
       <ColorfulTabs value={activeTab} onValueChange={setActiveTab}>
-        <ColorfulTabsList className="grid w-full grid-cols-6">
+        <ColorfulTabsList className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 mb-6">
           <ColorfulTabsTrigger value="overview" icon={BarChart3}>Overview</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="vendors" icon={Users}>Vendors</ColorfulTabsTrigger>
+          {/*
           <ColorfulTabsTrigger value="rfq" icon={FileText}>RFQ</ColorfulTabsTrigger>
+          */}
+          <ColorfulTabsTrigger value="purchase-requisition" icon={DollarSign}>Purchase Requisition</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="purchase-orders" icon={Package}>Purchase Orders</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="goods-receipt" icon={Receipt}>Goods Receipt</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="reports" icon={BarChart3}>Reports</ColorfulTabsTrigger>
+          
         </ColorfulTabsList>
 
         <ColorfulTabsContent value="overview" className="space-y-6">
@@ -120,7 +125,10 @@ const PurchasingModule: React.FC = () => {
         <ColorfulTabsContent value="vendors">
           <VendorMaster />
         </ColorfulTabsContent>
-
+        <ColorfulTabsContent value="purchase-requisition">
+          <PurchaseRequisition />
+          
+        </ColorfulTabsContent>
         <ColorfulTabsContent value="rfq">
           <RFQManagement />
         </ColorfulTabsContent>

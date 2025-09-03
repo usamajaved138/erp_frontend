@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Eye, Check, X, Edit, Trash2, Search, Package, ChevronsUpDown } from 'lucide-react';
 import { useAppContext, Vendor } from '@/contexts/AppContext';
 import { getPurchaseOrders,createPurchaseOrder } from '@/api/poApi';
+import { getVendors } from '@/api/getvendorApi';
+import { getItems } from '@/api/itemsApi';
 import {
   Popover,
   PopoverContent,
@@ -25,13 +27,13 @@ import {
 import { cn } from "@/lib/utils";
 
 interface PO {
-  po_id: number;
+  po_id?: number;
   vendor_id?: number;
-  vendor_name: string;
-  total_price: number;
-  status: string;
-  order_date: string;
-  items: Array<{ item_id: string; item_name: string; quantity: number; unit_price: number; }>;
+  vendor_name?: string;
+  total_price?: number;
+  status?: string;
+  order_date?: string;
+  items?: Array<{ item_id: number; item_name?: string; quantity: number; unit_price: number }>;
 }
 
 const PurchaseOrders: React.FC = () => {
@@ -48,7 +50,17 @@ const PurchaseOrders: React.FC = () => {
     };
     fetchOrders();
   }, []);
-
+const handleSavePO = async (payload: { vendor_id: number; items: POItem[] }) => {
+  try {
+    // created_by: replace 1 with logged-in user id
+    await createPurchaseOrder(payload.vendor_id, 1, payload.items);
+    setShowForm(false);
+    const data = await getPurchaseOrders();
+    setPurchaseOrders(data);
+  } catch (err) {
+    console.error("Save PO failed", err);
+  }
+};
 
      const filteredPO = purchaseOrders.filter((po) =>
     po.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,7 +103,7 @@ const PurchaseOrders: React.FC = () => {
             <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{totalValue.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -138,7 +150,7 @@ const PurchaseOrders: React.FC = () => {
                   <TableCell className="font-medium">{po.po_id}</TableCell>
                   <TableCell>{po.vendor_name}</TableCell>
                   <TableCell>{po.order_date}</TableCell>
-                  <TableCell>${po.total_price}</TableCell>
+                  <TableCell>{po.total_price}</TableCell>
                   <TableCell>{po.status}</TableCell>
                   
                   
@@ -148,156 +160,229 @@ const PurchaseOrders: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
-      {showForm && (
-        <PurchaseOrderForm
-          po={editingPO}
-          onClose={() => setShowForm(false)} onSave={function (data: any): void {
-            throw new Error('Function not implemented.');
-          } }        //  onSave={handleSavePO}
-        />
-      )}
+   {showForm && (
+  <PurchaseOrderForm po={editingPO} onClose={() => setShowForm(false)} onSave={handleSavePO} />
+)}
     </div>
   );
 };
-interface PurchaseOrderFormProps {
-  po: any | null;
-  onClose: () => void;
-  onSave: (data: any) => void;
-}
-interface Item {
+
+
+interface POItem {
   item_id: number;
-  item_name: string;
+  quantity: number;
   unit_price: number;
 }
 
-const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ po, onClose, onSave }) => {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [vendorId, setVendorId] = useState<number>(0);
-  const [poItems, setPoItems] = useState([{ item_id: 0, quantity: 1, unit_price: 0 }]);
+// Duplicate PO interface removed to avoid conflicting declarations.
+
+interface PurchaseOrderFormProps {
+  po: PO | null;
+  onClose: () => void;
+  onSave: (payload: { vendor_id: number; items: POItem[] }) => void;
+}
+
+export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ po, onClose, onSave }) => {
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
+
   const [vendorOpen, setVendorOpen] = useState(false);
   const [itemDropdown, setItemDropdown] = useState<number | null>(null);
 
+  const [vendor_id, setVendorId] = useState<number>(0);
+  const [poItems, setPoItems] = useState<POItem[]>([{ item_id: 0, quantity: 1, unit_price: 0 }]);
 
+  // normalize API responses and load lists
+  useEffect(() => {
+    (async () => {
+      try {
+        const [vendorsRes, itemsRes] = await Promise.all([getVendors(), getItems()]);
 
-  const handleItemChange = (index: number, field: string, value: any) => {
-    const updated = [...poItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setPoItems(updated);
+        // normalize vendor list (support .data or raw array)
+        const vendorList = (vendorsRes as any)?.data ?? (vendorsRes as any) ?? [];
+        setVendors(vendorList);
+
+        // normalize item list
+        const rawItems = ((itemsRes as any)?.data ?? (itemsRes as any) ?? []) as any[];
+        setItems(
+          rawItems.map((r) => ({
+            item_id: Number(r.item_id),
+            item_name: String(r.item_name ?? r.name ?? ""),
+            // keep other fields if needed
+          }))
+        );
+
+        // prefill when editing
+        if (po) {
+          setVendorId(Number(po.vendor_id ?? 0));
+          setPoItems(
+            (po.items ?? []).length
+              ? (po.items ?? []).map((it: any) => ({
+                  item_id: Number(it.item_id),
+                  quantity: Number(it.quantity),
+                  unit_price: Number(it.unit_price ?? 0),
+                }))
+              : [{ item_id: 0, quantity: 1, unit_price: 0 }]
+          );
+        } else {
+          // new form: reset
+          setVendorId(0);
+          setPoItems([{ item_id: 0, quantity: 1, unit_price: 0 }]);
+        }
+      } catch (err) {
+        console.error("Failed loading vendors/items:", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [po]); // reload when `po` changes (prefill or reset)
+
+  const addItemRow = () => setPoItems((p) => [...p, { item_id: 0, quantity: 1, unit_price: 0 }]);
+  const removeItemRow = (index: number) => setPoItems((p) => p.filter((_, i) => i !== index));
+
+  // IMPORTANT: this sets ONLY item_id. price remains manual.
+  const handleSelectItem = (rowIndex: number, itemId: number) => {
+    setPoItems((prev) => {
+      const copy = [...prev];
+      copy[rowIndex] = { ...copy[rowIndex], item_id: Number(itemId) };
+      return copy;
+    });
+    setItemDropdown(null);
   };
 
-  const addItemRow = () => {
-    setPoItems([...poItems, { item_id: 0, quantity: 1, unit_price: 0 }]);
-  };
-
-  const removeItemRow = (index: number) => {
-    const updated = poItems.filter((_, i) => i !== index);
-    setPoItems(updated);
+  const handleChangeRow = (index: number, field: keyof POItem, value: number) => {
+    setPoItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vendorId) {
-      alert("Please select a vendor.");
+    if (!vendor_id || vendor_id === 0) {
+      alert("Select vendor");
       return;
     }
-    onSave({ vendor_id: vendorId, items: poItems });
+    if (poItems.length === 0 || poItems.some((r) => !r.item_id || r.item_id === 0 || r.quantity <= 0)) {
+      alert("Add at least one item and ensure item and quantity are valid.");
+      return;
+    }
+    onSave({ vendor_id, items: poItems });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg w-[600px]">
-        <h2 className="text-lg font-semibold mb-4">{po ? "Edit Purchase Order" : "New Purchase Order"}</h2>
+        <h2 className="text-lg font-semibold mb-4">{po ? "Edit Purchase Order" : "Create Purchase Order"}</h2>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Vendor Selector */}
+          {/* Vendor selector */}
           <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {vendor_id ? vendors.find((v) => Number(v.vendor_id) === vendor_id)?.vendor_name ?? "Select Vendor" : "Select Vendor"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="max-h-[300px] overflow-auto">
               <Command>
-                <CommandInput placeholder="Search vendors..." className="text-black" />
-                <CommandEmpty>No vendor found.</CommandEmpty>
-                
+                <CommandInput placeholder="Search vendors..." />
+                <CommandEmpty>No vendors</CommandEmpty>
+                <CommandGroup>
+                  {vendors.map((v) => (
+                    <CommandItem
+                      key={v.vendor_id}
+                      onSelect={() => {
+                        setVendorId(Number(v.vendor_id));
+                        setVendorOpen(false);
+                      }}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", vendor_id === Number(v.vendor_id) ? "opacity-100" : "opacity-0")} />
+                      {v.vendor_name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
               </Command>
             </PopoverContent>
           </Popover>
 
-          {/* Items Table */}
+          {/* Items rows */}
           <div className="space-y-3">
-            {poItems.map((row, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <Popover open={itemDropdown === index} onOpenChange={(open) => setItemDropdown(open ? index : null)}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-1/3 justify-between">
-                      {row.item_id
-                        ? items.find((i) => i.item_id === row.item_id)?.item_name
-                        : "Select Item"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+            {poItems.map((row, idx) => {
+              const selected = items.find((it) => Number(it.item_id) === Number(row.item_id));
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  {/* Item dropdown */}
+                  <Popover open={itemDropdown === idx} onOpenChange={(open) => setItemDropdown(open ? idx : null)}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-1/3 justify-between">
+                        {row.item_id ? selected?.item_name ?? "Selected item" : "Select Item"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="max-h-[300px] overflow-auto">
+                      <Command>
+                        <CommandInput placeholder="Search items..." />
+                        <CommandEmpty>No items</CommandEmpty>
+                        <CommandGroup>
+                          {items.map((it) => (
+                            <CommandItem key={it.item_id} onSelect={() => handleSelectItem(idx, Number(it.item_id))}>
+                              <Check className={cn("mr-2 h-4 w-4", row.item_id === Number(it.item_id) ? "opacity-100" : "opacity-0")} />
+                              {it.item_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Quantity (manual) */}
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500">Qty</span>
+                    <Input
+                      type="number"
+                      className="w-24"
+                      min={1}
+                      value={row.quantity}
+                      onChange={(e) => handleChangeRow(idx, "quantity", Number(e.target.value || 0))}
+                    />
+                  </div>
+
+                  {/* Unit Price (manual) */}
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500">Price</span>
+                    <Input
+                      type="number"
+                      className="w-28"
+                      min={0}
+                      step="0.01"
+                      value={row.unit_price}
+                      onChange={(e) => handleChangeRow(idx, "unit_price", Number(e.target.value || 0))}
+                    />
+                  </div>
+
+                  {/* remove */}
+                  {poItems.length > 1 && (
+                    <Button type="button" variant="destructive" size="icon" onClick={() => removeItemRow(idx)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="max-h-[300px] overflow-auto">
-                    <Command>
-                      <CommandInput placeholder="Search items..." className="text-black" />
-                      <CommandEmpty>No item found.</CommandEmpty>
-                      <CommandGroup>
-                        {items.map((item) => (
-                          <CommandItem
-                            key={item.item_id}
-                            onSelect={() => {
-                              handleItemChange(index, "item_id", item.item_id);
-                              handleItemChange(index, "unit_price", item.unit_price);
-                              setItemDropdown(null);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                row.item_id === item.item_id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {item.item_name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <Input
-                  type="number"
-                  placeholder="Qty"
-                  className="w-20"
-                  value={row.quantity}
-                  onChange={(e) => handleItemChange(index, "quantity", parseFloat(e.target.value))}
-                />
-                <Input
-                  type="number"
-                  placeholder="Price"
-                  className="w-28"
-                  value={row.unit_price}
-                  onChange={(e) => handleItemChange(index, "unit_price", parseFloat(e.target.value))}
-                />
-                {poItems.length > 1 && (
-                  <Button type="button" variant="destructive" size="icon" onClick={() => removeItemRow(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
+
             <Button type="button" variant="secondary" onClick={addItemRow}>
               + Add Item
             </Button>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600">
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600"
+           
+            >
               Save
             </Button>
           </div>
@@ -306,6 +391,7 @@ const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ po, onClose, onSa
     </div>
   );
 };
+
 
 
 export default PurchaseOrders;

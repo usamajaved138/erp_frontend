@@ -7,6 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import GRNDetail from "./components/purchasing/GRNDetail";
+import GoodsReceipt from "./components/purchasing/GoodsReceipt";
+
 
 const queryClient = new QueryClient();
 
@@ -19,7 +22,11 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/grn/:grn_id" element={<GRNDetail />} />
+            
             <Route path="*" element={<NotFound />} />
+            
+           
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
