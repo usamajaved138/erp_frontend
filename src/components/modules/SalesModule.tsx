@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ColorfulTabs, ColorfulTabsContent, ColorfulTabsList, ColorfulTabsTrigger } from '@/components/ui/colorful-tabs';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DollarSign, ShoppingCart, TrendingUp, FileText, CreditCard, BarChart3 } from 'lucide-react';
 import QuotationManagement from '@/components/sales/QuotationManagement';
@@ -12,6 +13,12 @@ import SalesReports from '@/components/sales/SalesReports';
 import QuotationForm from '@/components/forms/QuotationForm';
 import SalesOrderForm from '@/components/forms/SalesOrderForm';
 import InvoiceForm from '@/components/forms/InvoiceForm';
+import SalesPerson from '@/components/sales/SalesPerson';
+import Customers from '@/components/sales/Customers';
+
+
+
+
 
 const SalesModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -29,6 +36,9 @@ const SalesModule: React.FC = () => {
     posTransactions: 127
   };
 
+   const handleSelect = (value: string) => {
+    setActiveTab(value);
+  };
   const handleQuickSale = () => {
     setShowPOSDialog(true);
   };
@@ -53,17 +63,31 @@ const SalesModule: React.FC = () => {
             <FileText className="h-4 w-4 mr-2" />
             New Quote
           </Button>
+          
         </div>
       </div>
 
       <ColorfulTabs value={activeTab} onValueChange={setActiveTab}>
-        <ColorfulTabsList className="grid w-full grid-cols-6">
+        <ColorfulTabsList className="grid w-full grid-cols-7">
           <ColorfulTabsTrigger value="overview">Overview</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="quotations">Quotations</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="orders">Sales Orders</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="invoices">Invoices</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="pos">POS System</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="reports">Reports</ColorfulTabsTrigger>
+          <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">More</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => handleSelect("salesperson")}>
+              Sales Persons
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSelect("customer")}>
+              Customers
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         </ColorfulTabsList>
 
         <ColorfulTabsContent value="overview" className="space-y-6">
@@ -169,6 +193,12 @@ const SalesModule: React.FC = () => {
 
         <ColorfulTabsContent value="reports">
           <SalesReports />
+        </ColorfulTabsContent>
+        <ColorfulTabsContent value="salesperson">
+          <SalesPerson />
+        </ColorfulTabsContent>
+        <ColorfulTabsContent value="customer">
+          <Customers />
         </ColorfulTabsContent>
       </ColorfulTabs>
 
