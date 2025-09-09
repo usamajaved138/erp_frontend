@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ColorfulTabs, ColorfulTabsContent, ColorfulTabsList, ColorfulTabsTrigger } from '@/components/ui/colorful-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Warehouse, ArrowRightLeft, Calculator, FileText, Settings } from 'lucide-react';
@@ -7,21 +7,42 @@ import WarehouseManagement from '../inventory/WarehouseManagement';
 import StockTransactions from '../inventory/StockTransactions';
 import StockValuation from '../inventory/StockValuation';
 import InventoryReports from '../inventory/InventoryReports';
-
+import { getItems } from '@/api/itemsApi';
+import { getWarehouses } from '@/api/getWarehousesApi';
 
 
 const InventoryModule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
 
-  const inventoryStats = {
-    totalItems: 156,
+const inventoryStats = {
+    // totalItems: 156,
     totalValue: 485750,
     lowStockItems: 12,
-    warehouses: 3,
+    // warehouses: 3,
     recentTransactions: 45,
     valuationMethod: 'FIFO'
   };
+
+// State to hold items
+const [items, setItems] = useState<any[]>([]);
+const [warehouses, setWarehouses] = useState<any[]>([]);
+ useEffect(() => {
+    // Fetch SO list
+    const fetchData = async () => {
+      const itemsdata = await getItems();
+      const warehousesdata = await getWarehouses();
+      console.log('Fetched items data:', itemsdata);
+      setItems(itemsdata);
+      console.log('Fetched warehouses data:', warehousesdata);
+      setWarehouses(warehousesdata);
+    };
+    fetchData();
+  }, []);
+
+
+const totalItems = items.length;
+const totalWarehouses = warehouses.length;
 
   return (
     <div className="space-y-6">
@@ -65,7 +86,7 @@ const InventoryModule: React.FC = () => {
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Package className="h-6 w-6 text-blue-600" />
-                  <span className="text-3xl font-bold text-blue-800">{inventoryStats.totalItems}</span>
+                  <span className="text-3xl font-bold text-blue-800">{totalItems}</span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">Active inventory items</p>
               </CardContent>
@@ -102,7 +123,7 @@ const InventoryModule: React.FC = () => {
               <CardContent>
                 <div className="flex items-center gap-2">
                   <Warehouse className="h-6 w-6 text-purple-600" />
-                  <span className="text-3xl font-bold text-purple-800">{inventoryStats.warehouses}</span>
+                  <span className="text-3xl font-bold text-purple-800">{totalWarehouses}</span>
                 </div>
                 <p className="text-xs text-purple-600 mt-1">Active warehouse locations</p>
               </CardContent>

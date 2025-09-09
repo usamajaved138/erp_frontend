@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -204,7 +203,7 @@ const GRNForm: React.FC<{
   const [received_by, setReceivedBy] = useState("");
   const [remarks, setRemarks] = useState("");
 
-  // 🔹 Fetch PO list
+  //  Fetch PO list
   useEffect(() => {
     const fetchPOs = async () => {
       try {
@@ -217,7 +216,7 @@ const GRNForm: React.FC<{
     fetchPOs();
   }, []);
 
-  // 🔹 Fetch PO details (only update items)
+  //  Fetch PO details (only update items)
   const fetchPODetails = async (po_id: number) => {
     try {
       const data = await getPODetails(po_id);
@@ -236,7 +235,7 @@ const GRNForm: React.FC<{
     }
   };
 
-  // 🔹 Handle PO selection
+  //  Handle PO selection
   const handleSelectPO = (po: any) => {
     setSelectedPO(po); // Keep vendor_name, po_id, vendor_id, etc.
     setOpenPO(false);

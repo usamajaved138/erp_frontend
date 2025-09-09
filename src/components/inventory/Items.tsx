@@ -282,12 +282,15 @@ const ItemForm: React.FC<{
             type='text'
             placeholder="Description"
           />
-          <Input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-700 mb-0">Price</span>
+            <Input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
             placeholder="Price"
           />
+          </div>
            <Input
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
