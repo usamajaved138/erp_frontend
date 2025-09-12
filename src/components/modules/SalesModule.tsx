@@ -15,6 +15,7 @@ import SalesOrderForm from '@/components/forms/SalesOrderForm';
 import InvoiceForm from '@/components/forms/InvoiceForm';
 import SalesPerson from '@/components/sales/SalesPerson';
 import Customers from '@/components/sales/Customers';
+import DeliveryChallans from '@/components/sales/DeliveryChallans';
 
 
 
@@ -70,8 +71,9 @@ const SalesModule: React.FC = () => {
       <ColorfulTabs value={activeTab} onValueChange={setActiveTab}>
         <ColorfulTabsList className="grid w-full grid-cols-7">
           <ColorfulTabsTrigger value="overview">Overview</ColorfulTabsTrigger>
-          <ColorfulTabsTrigger value="quotations">Quotations</ColorfulTabsTrigger>
+          
           <ColorfulTabsTrigger value="orders">Sales Orders</ColorfulTabsTrigger>
+          <ColorfulTabsTrigger value="delivery-challans">Delivery Challans</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="invoices">Invoices</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="pos">POS System</ColorfulTabsTrigger>
           <ColorfulTabsTrigger value="reports">Reports</ColorfulTabsTrigger>
@@ -183,14 +185,14 @@ const SalesModule: React.FC = () => {
           </Card>
         </ColorfulTabsContent>
 
-        <ColorfulTabsContent value="quotations">
-          <QuotationManagement />
-        </ColorfulTabsContent>
+        
 
         <ColorfulTabsContent value="orders">
           <SalesOrders />
         </ColorfulTabsContent>
-
+        <ColorfulTabsContent value="delivery-challans">
+          <DeliveryChallans />
+        </ColorfulTabsContent>
         <ColorfulTabsContent value="invoices">
           <InvoiceManagement />
         </ColorfulTabsContent>

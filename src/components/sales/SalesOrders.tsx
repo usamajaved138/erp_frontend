@@ -8,26 +8,33 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Eye, Check, X, Edit, Trash2, Search, Package, ChevronsUpDown, Truck } from 'lucide-react';
-
 import { getItems } from '@/api/itemsApi';
 import { getCustomers } from '@/api/salesOrdersApi';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
+import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover";
+import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { getSOs,deleteSO,createSO,updateSO } from '@/api/salesOrdersApi';
+import { getSOs,getSOById,deleteSO,createSO,updateSO } from '@/api/salesOrdersApi';
 import { toast } from '../ui/use-toast';
+import { DialogDescription } from '@radix-ui/react-dialog';
 
 interface SO {
+  so_id?: number;
+  order_number?: number;
+  customer_id?: number;
+  customer_name?: string;
+  total_amount?: number;
+  status?: string;
+  order_date?: Date;
+  delivery_date?: Date;
+  shipping_address?: string;
+  payment_terms?: string;
+  created_by?: number;
+  discount?: number;
+  tax?: number;
+  items?: Array<{ item_id: number; item_name?: string;
+    quantity: number; unit_price: number; discount: number; tax: number }>;
+}
+interface viewingSO {
   so_id?: number;
   order_number?: number;
   customer_id?: number;
@@ -51,10 +58,13 @@ const SalesOrders: React.FC = () => {
    const [salesOrders, setSalesOrders] = useState<SO[]>([]);
    const [editingSO, setEditingSO] = useState<SO | null>(null);
 
+   const [viewingSO, setViewingSO] = useState<viewingSO | null>(null);
+   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+   
 //Load SOs
-  useEffect(() => {
-    loadSalesOrders();
-  }, []);
+useEffect(() => {
+  loadSalesOrders();
+}, []);
 
   const loadSalesOrders = async () => {
     try {
@@ -65,7 +75,14 @@ const SalesOrders: React.FC = () => {
       console.error("Error loading sales orders", error);
     }
   };
-
+const handleViewSO = (so_id) => {
+  const selectedSO = filteredSO.find(so => so.so_id === so_id);
+  if (selectedSO) {
+    setViewingSO(selectedSO);
+    console.log("Filter Viewing SO:", selectedSO);
+    setViewDialogOpen(true);
+  }
+};
 const handleSaveSO = async (payload: { 
   customer_id: number;
   order_date: Date;
@@ -204,92 +221,142 @@ const handleDeleteSO = async (soId: number) => {
                   </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                
-                <TableHead>SO Number</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Order Date</TableHead>
-                <TableHead>Delivery Date</TableHead>
-                <TableHead>Shipping Address</TableHead>
-                <TableHead>Payment Term</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-               <TableHead >Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSO.map((so) => (
-                <TableRow key={so.so_id}>
-                  <TableCell className="font-medium">{so.order_number}</TableCell>
-                  <TableCell>{so.customer_name}</TableCell>
-                  <TableCell>{so.order_date ? new Date(so.order_date).toLocaleDateString() : ''}</TableCell>
-                  <TableCell>{so.delivery_date ? new Date(so.delivery_date).toLocaleDateString() : ''}</TableCell>
-                  <TableCell>{so.shipping_address}</TableCell>
-                  <TableCell>{so.payment_terms}</TableCell>
-                  <TableCell>{so.total_amount}</TableCell>
-                <TableCell>
-                    <Badge className={getStatusColor(so.status)}>
-                      {so.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {so.status === "CREATED" && (
-                        <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => {
-                        setEditingSO(so);
-                        setShowForm(true);
-                        }}
-                          >
-                      <Edit className="h-4 w-4" />
-                        </Button>
-                          )}
-                      {so.status === 'DELIVERED' && (
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-500 hover:bg-blue-600"
-                         // onClick={() => handleShipOrder(so.so_id)}
-                        >
-                          <Truck className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {so.status === 'CREATED' && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteSO(so.so_id)}
-                      > 
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                  
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-   {showForm && (
-  <SalesOrderForm so={editingSO} onClose={() => { setShowForm(false); setEditingSO(null); }} onSave={handleSaveSO} />
-)}
-    </div>
-  );
-};
+ <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>SO Number</TableHead>
+          <TableHead>Customer</TableHead>
+          <TableHead>Order Date</TableHead>
+          <TableHead>Delivery Date</TableHead>
+          <TableHead>Shipping Address</TableHead>
+          <TableHead>Payment Term</TableHead>
+          <TableHead>Amount</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredSO.map((so) => (
+          <TableRow key={so.so_id}>
+            <TableCell className="font-medium">{so.order_number}</TableCell>
+            <TableCell>{so.customer_name}</TableCell>
+            <TableCell>{so.order_date ? new Date(so.order_date).toLocaleDateString() : ''}</TableCell>
+            <TableCell>{so.delivery_date ? new Date(so.delivery_date).toLocaleDateString() : ''}</TableCell>
+            <TableCell>{so.shipping_address}</TableCell>
+            <TableCell>{so.payment_terms}</TableCell>
+            <TableCell>{so.total_amount}</TableCell>
+            <TableCell>
+              <Badge className={getStatusColor(so.status)}>{so.status}</Badge>
+            </TableCell>
+            <TableCell>
+              <div className="flex gap-1">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleViewSO(so.so_id)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                {so.status === "CREATED" && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setEditingSO(so);
+                      setShowForm(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+                {so.status === 'DELIVERED' && (
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Truck className="h-4 w-4" />
+                  </Button>
+                )}
+                {so.status === 'CREATED' && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteSO(so.so_id)}
+                  > 
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </CardContent>
+</Card>
 
+{showForm && (
+  <SalesOrderForm 
+    so={editingSO} 
+    onClose={() => { setShowForm(false); setEditingSO(null); }} 
+    onSave={handleSaveSO} 
+  />
+)}
+
+<Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Sales Order Details</DialogTitle>
+    </DialogHeader>
+    {viewingSO && (
+      <>
+        <table className="w-full border border-gray-300 mb-4 text-sm">
+          <tbody>
+            <tr><td className="p-2 font-medium text-gray-600 border">Order Number</td><td className="p-2 border">{viewingSO.order_number}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Customer</td><td className="p-2 border">{viewingSO.customer_name}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Order Date</td><td className="p-2 border">{viewingSO.order_date ? new Date(viewingSO.order_date).toLocaleDateString() : ''}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Delivery Date</td><td className="p-2 border">{viewingSO.delivery_date ? new Date(viewingSO.delivery_date).toLocaleDateString() : ''}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Shipping Address</td><td className="p-2 border">{viewingSO.shipping_address}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Payment Terms</td><td className="p-2 border">{viewingSO.payment_terms}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Discount</td><td className="p-2 border">{viewingSO.discount}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Tax</td><td className="p-2 border">{viewingSO.tax}</td></tr>
+            <tr><td className="p-2 font-medium text-gray-600 border">Total Amount</td><td className="p-2 border font-semibold text-blue-700">{Number(viewingSO.total_amount).toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+
+        <h3 className="text-md font-semibold mb-2">Items</h3>
+        <table className="w-full border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              
+              <th className="p-2 border text-left">Item Name</th>
+              <th className="p-2 border text-left">Quantity</th>
+              <th className="p-2 border text-left">Unit Price</th>
+              <th className="p-2 border text-left">Discount</th>
+              <th className="p-2 border text-left">Tax</th>
+            </tr>
+          </thead>
+          <tbody>
+            {viewingSO.items?.map((item, index) => (
+              <tr key={index}>
+                <td className="p-2 border">{item.item_name ?? '-'}</td>
+                <td className="p-2 border">{item.quantity}</td>
+                <td className="p-2 border">{item.unit_price}</td>
+                <td className="p-2 border">{item.discount}</td>
+                <td className="p-2 border">{item.tax}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
+   </div>
+  );
+   
+};
 interface SOItem {
   item_id: number;
   quantity: number;
@@ -390,12 +457,12 @@ export const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ so, onClose, onS
       (sum, row) => sum + (row.quantity * row.unit_price) - row.discount + row.tax,
       0
     );
-    const t_discount= soItems.reduce((sum, row) => sum + row.discount, 0);
-    const t_tax= soItems.reduce((sum, row) => sum + row.tax, 0);
+    const discount= soItems.reduce((sum, row) => sum + row.discount, 0);
+    const tax= soItems.reduce((sum, row) => sum + row.tax, 0);
 
     setTotalAmount(total);
-    setDiscount(t_discount);
-    setTax(t_tax);
+    setDiscount(discount);
+    setTax(tax);
   }, [soItems]);
 
   const addItemRow = () => setSoItems((p) => [...p, { item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
@@ -632,7 +699,6 @@ export const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ so, onClose, onS
     </div>
   );
 };
-
 
 
 export default SalesOrders;
