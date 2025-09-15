@@ -34,6 +34,8 @@ export const createSalesInvoice = async (
   status: string,
   remarks: string,
   created_by: number,
+  discount: number,
+  tax: number,
   total_amount: number,
   items: { item_id: number; quantity: number; unit_price: number; discount: number; tax: number }[]
 ) => {
@@ -45,6 +47,8 @@ export const createSalesInvoice = async (
       status,
       remarks,
       created_by,
+      discount,
+      tax,
       total_amount,
       items, // Convert array to JSON
     });

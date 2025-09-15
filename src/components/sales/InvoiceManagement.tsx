@@ -34,6 +34,7 @@ interface SalesInvoice {
   sales_person_id: number;
   sales_person_name: string;
   receivable_account_id: number;
+  receivable_account_code: string;
   payment_term: string;
   credit_limit: number;
   total_amount: number;
@@ -55,6 +56,7 @@ interface viewingSO {
   sales_person_id: number;
   sales_person_name: string;
   receivable_account_id: number;
+  receivable_account_code: string;
   payment_term: string;
   credit_limit: number;
   total_amount: number;
@@ -102,6 +104,8 @@ const handleSaveSI = async (payload: {
   status: string,
   remarks: string,
   created_by: number,
+  discount: number,
+  tax: number,
   total_amount: number,
   items: SIItem[]
 }) => {
@@ -114,6 +118,8 @@ const handleSaveSI = async (payload: {
         payload.status,
         payload.remarks,
         payload.created_by,
+        payload.discount,
+        payload.tax,
         payload.total_amount,
         payload.items
       );
@@ -260,7 +266,7 @@ const handleSaveSI = async (payload: {
             </tr>
              <tr>
               <td className="p-2 font-medium text-gray-600 border">Account ID</td>
-              <td className="p-2 border">{viewingSO.receivable_account_id ? viewingSO.receivable_account_id : ''}</td>
+              <td className="p-2 border">{viewingSO.receivable_account_code}</td>
             </tr>
              <tr>
               <td className="p-2 font-medium text-gray-600 border">Payment Term</td>
@@ -273,10 +279,6 @@ const handleSaveSI = async (payload: {
              <tr>
               <td className="p-2 font-medium text-gray-600 border">Status</td>
               <td className="p-2 border">{viewingSO.status}</td>
-            </tr>
-             <tr>
-              <td className="p-2 font-medium text-gray-600 border">Remarks</td>
-              <td className="p-2 border">{viewingSO.remarks}</td>
             </tr>
           </tbody>
         </table>
@@ -303,6 +305,10 @@ const handleSaveSI = async (payload: {
             ))}
           </tbody>
         </table>
+         {/* Remarks */}
+        <div className="mb-4">
+          <p><strong>Remarks:</strong> {viewingSO.remarks || "None"}</p>
+        </div>
       </>
     )}
   </DialogContent>
@@ -328,6 +334,8 @@ interface SalesInvoiceFormProps {
     status: string,
     remarks: string,
     created_by: number,
+    discount: number,
+    tax: number,
     total_amount: number,
     
     items: SIItem[];
@@ -345,6 +353,8 @@ export const SalesInvoiceForm: React.FC<SalesInvoiceFormProps> = ({ onClose, onS
   const [status, setStatus] = useState<string>('CREATED');
   const [remarks, setRemarks] = useState<string>('');
   const [created_by, setCreatedBy] = useState<number>(1);
+  const [discount, setDiscount] = useState<number>(0);
+  const [tax, setTax] = useState<number>(0);
   const [total_amount, setTotalAmount] = useState<number>(0);
 
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -359,6 +369,7 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
       try {
         const data = await getDeliveryChallans();
         setDeliveryChallans(data);
+        console.log("Fetched DCs:", data);
         const custData = await getCustomers();
         setCustomers(custData);
         const itemData = await getItems();
@@ -390,19 +401,21 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
       );
     }
   }, [dc_id, deliveryChallans]);
-   // 🔹 Auto-calc total_amount whenever siItems change
-    useEffect(() => {
-      const total = siItems.reduce(
-        (sum, row) => sum + (row.quantity * row.unit_price) - row.discount + row.tax,
-        0
-      );
-      const discount= siItems.reduce((sum, row) => sum + row.discount, 0);
-      const tax= siItems.reduce((sum, row) => sum + row.tax, 0);
-  
-      setTotalAmount(total);
-    //  setDiscount(discount);
-    //  setTax(tax);
-    }, [siItems]);
+  // 🔹 Auto-calc total_amount whenever siItems change
+   useEffect(() => {
+     
+     const discount= siItems.reduce((sum, row) => sum + row.discount, 0);
+     const tax= siItems.reduce((sum, row) => sum + row.tax, 0);
+     const total = siItems.reduce(
+       (sum, row) => sum + (row.quantity * row.unit_price) - row.discount + row.tax,
+       0
+     );
+     
+     setDiscount(discount);
+     setTax(tax);
+     setTotalAmount(total);
+   }, [siItems]);
+ 
    const addItemRow = () => setSiItems((p) => [...p, { item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
     const removeItemRow = (index: number) => setSiItems((p) => p.filter((_, i) => i !== index));
 
@@ -441,7 +454,9 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
       status,
       remarks,
       created_by,
-      total_amount: siItems.reduce((sum, it) => sum + (it.unit_price * it.quantity) - it.discount + it.tax, 0),
+      discount,
+      tax,
+      total_amount,
       items: siItems
     });
   };
@@ -451,45 +466,50 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
       <div className="bg-white p-6 rounded-lg w-[800px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">Create Sales Invoice</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Delivery Challan */}
+                            <div className="flex space-x-4">
            {/* Delivery Challan */}
           <Popover open={dcOpen} onOpenChange={setDcOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" role="combobox" className="w-full justify-between">
-                {dc_id ? deliveryChallans.find((dc) => Number(dc.dc_id) === dc_id)?.dc_number ?? "Select Delivery Challan" : "Select Delivery Challan"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="max-h-[300px] overflow-auto">
-              <Command>
-                <CommandInput placeholder="Search DCs..." />
-                <CommandEmpty>No DC</CommandEmpty>
-                <CommandGroup>
-                  {deliveryChallans.map((dc) => (
-                    <CommandItem
-                      key={dc.dc_id}
-                      onSelect={() => {
-                        setDcId(Number(dc.dc_id));
-                        setDcOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          dc_id === Number(dc.dc_id)
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {dc.dc_number}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          {/* Customer (prefilled from SO) */}
-           <div className="flex space-x-4">
+  <PopoverTrigger asChild>
+    <Button variant="outline" role="combobox" className="w-full justify-between">
+      {dc_id ? deliveryChallans.find((dc) => Number(dc.dc_id) === dc_id)?.dc_no ?? "Select Delivery Challan" : "Select Delivery Challan"}
+      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="max-h-[300px] overflow-auto p-4">
+    <Command>
+      <CommandInput placeholder="Search DCs..." />
+      <CommandEmpty>No DC</CommandEmpty>
+      <CommandGroup>
+        {deliveryChallans.filter(dc => dc.status === 'APPROVED').length === 0 ? (
+          <div>No approved DCs available</div>
+        ) : (
+          deliveryChallans
+            .filter(dc => dc.status === 'APPROVED') // Filter to show only approved DCs
+            .map((dc) => (
+              <CommandItem
+                key={dc.dc_id}
+                onSelect={() => {
+                  setDcId(Number(dc.dc_id));
+                  setDcOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    dc_id === Number(dc.dc_id) ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {dc.dc_no}
+              </CommandItem>
+            ))
+        )}
+      </CommandGroup>
+    </Command>
+  </PopoverContent>
+</Popover>
+
+         
+          
   {/* Customer Popover */}
   <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
     <PopoverTrigger asChild>
@@ -523,10 +543,10 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
   </Popover>
 </div>
 
-                          <div className="flex space-x-4">
+                          
 
   {/* Remarks */}
-  <div className="flex flex-col flex-1">
+  <div className="flex flex-col">
     <span className="text-xs text-gray-500">Remarks</span>
     <textarea
       value={remarks}
@@ -535,7 +555,7 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
       rows={2} // Set rows for height of textarea
     />
   </div>
-</div>
+
 
 {/* Items rows */}
 <div className="space-y-3">
@@ -628,7 +648,18 @@ const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, uni
                         + Add Item
                       </Button>
                     </div>
-
+  <div className="flex flex-col md:flex-row md:space-x-6 space-y-2 md:space-y-0 items-center justify-center text-gray-700 font-semibold">
+            {/* Total Amount */}
+            <div className="flex justify-end font-semibold text-gray-700">
+              Total Amount: {total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="flex justify-end font-semibold text-gray-700">
+              Total Discount: {discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="flex justify-end font-semibold text-gray-700">
+              Total Tax: {tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
                         {/* Actions */}
                   <div className="flex gap-2 justify-end">
                     <Button type="button" variant="outline" onClick={onClose}>

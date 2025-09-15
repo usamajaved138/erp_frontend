@@ -414,19 +414,30 @@ const [dcItems, setDcItems] = useState<DCItem[]>([{ item_id: 0, quantity: 1, uni
                           <CommandInput placeholder="Search SOs..." />
                           <CommandEmpty>No SO</CommandEmpty>
                           <CommandGroup>
-                            {salesOrders.map((so) => (
-                              <CommandItem
-                                key={so.so_id}
-                                onSelect={() => {
-                                  setSoId(Number(so.so_id));
-                                  setSoOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", so_id === Number(so.so_id) ? "opacity-100" : "opacity-0")} />
-                                {so.order_number}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
+                                  {salesOrders.filter(so => so.status === 'APPROVED').length === 0 ? (
+                                    <div>No approved SOs available</div>
+                                  ) : (
+                                    salesOrders
+                                      .filter(so => so.status === 'APPROVED') // Filter to show only approved SOs
+                                      .map((so) => (
+                                        <CommandItem
+                                          key={so.so_id}
+                                          onSelect={() => {
+                                            setSoId(Number(so.so_id));
+                                            setSoOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              so_id === Number(so.so_id) ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {so.order_number} - {so.customer_name}
+                                        </CommandItem>
+                                      ))
+                                  )}
+                                </CommandGroup>
                         </Command>
                       </PopoverContent>
                     </Popover>
