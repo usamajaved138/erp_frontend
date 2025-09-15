@@ -1,322 +1,647 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import DatePicker from "react-datepicker";  // Import DatePicker
+import "react-datepicker/dist/react-datepicker.css"; // Import DatePicker styles
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, FileText, Mail, Download, RefreshCw, Edit, Trash2 } from 'lucide-react';
-import { useAppContext } from '@/contexts/AppContext';
+import { Plus, Eye, Check, X, Edit, Trash2, Search, Package, ChevronsUpDown, Truck } from 'lucide-react';
+import { getItems } from '@/api/itemsApi';
+import { getCustomers } from '@/api/salesOrdersApi';
+import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover";
+import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { getSOs } from '@/api/salesOrdersApi';
+import { toast } from '../ui/use-toast';
+import { createDC, getDeliveryChallans } from '@/api/deliveryChallansApi';
+import { getWarehouses } from '@/api/getWarehousesApi';
+import { set } from 'date-fns';
+import {getSaleInvoices,createSalesInvoice} from '@/api/salesInvoiceApi';
 
-const InvoiceManagement: React.FC = () => {
-  const { invoices, customers, addInvoice, updateInvoice, deleteInvoice } = useAppContext();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    customerId: '',
-    customerName: '',
-    amount: '',
-    status: 'Draft' as const,
-    dueDate: '',
-    items: [{ id: '1', description: '', quantity: 1, price: 0, total: 0 }]
-  });
 
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+interface SalesInvoice {
+  sales_invoice_id: number;
+  sales_invoice_no: number;
+  dc_id: number;
+  customer_id: number;
+  customer_name: string;
+  invoice_date: Date;
+  sales_person_id: number;
+  sales_person_name: string;
+  receivable_account_id: number;
+  payment_term: string;
+  credit_limit: number;
+  total_amount: number;
+  status: string;
+  remarks: string;
+  created_by: number;
+  updated_by: number;
+  updated_date: Date;
+  items: Array<{ item_id: number; item_name: string;
+    quantity: number; unit_price: number; discount: number; tax: number }>;
+}
+interface viewingSO {
+  sales_invoice_id: number;
+  sales_invoice_no: number;
+  dc_id: number;
+  customer_id: number;
+  customer_name: string;
+  invoice_date: Date;
+  sales_person_id: number;
+  sales_person_name: string;
+  receivable_account_id: number;
+  payment_term: string;
+  credit_limit: number;
+  total_amount: number;
+  status: string;
+  remarks: string;
+  created_by: number;
+  updated_by: number;
+  updated_date: Date;
+  items: Array<{ item_id: number; item_name: string;
+    quantity: number; unit_price: number; discount: number; tax: number }>;
+}
+
+const SalesInvoice: React.FC = () => {
+ const [searchTerm, setSearchTerm] = useState('');
+   const [showForm, setShowForm] = useState(false);
+   const [salesInvoices, setSalesInvoices] = useState<SalesInvoice[]>([]);
+
+   const [viewingSO, setViewingSO] = useState<viewingSO | null>(null);
+   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+
+   //Load Sales Invoices
+useEffect(() => {
+  loadSalesInvoices();
+}, []);
+
+  const loadSalesInvoices = async () => {
+    try {
+      const data = await getSaleInvoices();
+
+      setSalesInvoices(data);
+    } catch (error) {
+      console.error("Error loading sales invoices", error);
+    }
+  };
+const handleViewSI = (sales_invoice_id) => {
+  const selectedSI = salesInvoices.find(si => si.sales_invoice_id === sales_invoice_id);
+  if (selectedSI) {
+    setViewingSO(selectedSI);
+    setViewDialogOpen(true);
+  }
+};
+const handleSaveSI = async (payload: {
+  dc_id: number,
+  customer_id: number,
+  status: string,
+  remarks: string,
+  created_by: number,
+  total_amount: number,
+  items: SIItem[]
+}) => {
+  try {
+      // CREATE
+      await createSalesInvoice(
+        payload.dc_id,
+        payload.customer_id,
+       
+        payload.status,
+        payload.remarks,
+        payload.created_by,
+        payload.total_amount,
+        payload.items
+      );
+      toast({ title: "Created", description: "Sales Invoice created successfully!" });
+    setShowForm(false);
+    loadSalesInvoices();
+  } catch (err) {
+    console.error("Save SI failed", err);
+  }
+};
+
+     const filteredSI = salesInvoices.filter((si) =>
+    si.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    si.sales_invoice_no.toString().includes(searchTerm)
   );
-
+  const totalSIs = salesInvoices.length;
+  const createdSIs = salesInvoices.filter(si => si.status === 'CREATED').length;
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid': return 'bg-green-100 text-green-800';
-      case 'Sent': return 'bg-blue-100 text-blue-800';
-      case 'Draft': return 'bg-gray-100 text-gray-800';
-      case 'Overdue': return 'bg-red-100 text-red-800';
+      case 'CREATED': return 'bg-gray-100 text-gray-800';
+      case 'SENT': return 'bg-blue-100 text-blue-800';
+      case 'RECEIVED': return 'bg-green-100 text-green-800';
+      case 'CANCELLED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const totalOutstanding = invoices
-    .filter(inv => inv.status === 'Sent' || inv.status === 'Overdue')
-    .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const totalPaid = invoices
-    .filter(inv => inv.status === 'Paid')
-    .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedCustomer = customers.find(c => c.id === formData.customerId);
-    
-    const invoiceData = {
-      customerId: formData.customerId,
-      customerName: selectedCustomer?.name || formData.customerName,
-      amount: parseFloat(formData.amount),
-      status: formData.status,
-      dueDate: formData.dueDate,
-      items: formData.items
-    };
-
-    if (editingInvoice) {
-      updateInvoice(editingInvoice, invoiceData);
-    } else {
-      addInvoice(invoiceData);
-    }
-
-    setFormData({
-      customerId: '',
-      customerName: '',
-      amount: '',
-      status: 'Draft',
-      dueDate: '',
-      items: [{ id: '1', description: '', quantity: 1, price: 0, total: 0 }]
-    });
-    setEditingInvoice(null);
-    setIsDialogOpen(false);
-  };
-
-  const handleEdit = (invoice: any) => {
-    setFormData({
-      customerId: invoice.customerId,
-      customerName: invoice.customerName,
-      amount: invoice.amount.toString(),
-      status: invoice.status,
-      dueDate: invoice.dueDate,
-      items: invoice.items
-    });
-    setEditingInvoice(invoice.id);
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this invoice?')) {
-      deleteInvoice(id);
-    }
-  };
-
-  const updateItemTotal = (index: number, field: string, value: any) => {
-    const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    if (field === 'quantity' || field === 'price') {
-      newItems[index].total = newItems[index].quantity * newItems[index].price;
-    }
-    setFormData({ ...formData, items: newItems });
-    
-    const totalAmount = newItems.reduce((sum, item) => sum + item.total, 0);
-    setFormData(prev => ({ ...prev, items: newItems, amount: totalAmount.toString() }));
-  };
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Outstanding</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Total SIs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">${totalOutstanding.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{totalSIs}</div>
           </CardContent>
         </Card>
         <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Created SIs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalPaid.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Invoices</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.length}</div>
+            <div className="text-2xl font-bold text-yellow-600">{createdSIs}</div>
           </CardContent>
         </Card>
       </div>
-
       <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>MetaBooks Invoice Management</CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-purple-500 to-purple-600">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Sales Invoices
+            </CardTitle>
+           <Button
+              onClick={() => setShowForm(true)}
+              className="bg-gradient-to-r from-purple-500 to-purple-600">
                   <Plus className="h-4 w-4 mr-2" />
-                  New Invoice
+                  Create Invoice
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{editingInvoice ? 'Edit Invoice' : 'Create New Invoice'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="customer">Customer</Label>
-                      <Select value={formData.customerId} onValueChange={(value) => {
-                        const customer = customers.find(c => c.id === value);
-                        setFormData({ ...formData, customerId: value, customerName: customer?.name || '' });
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map(customer => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="dueDate">Due Date</Label>
-                      <Input
-                        id="dueDate"
-                        type="date"
-                        value={formData.dueDate}
-                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label>Invoice Items</Label>
-                    {formData.items.map((item, index) => (
-                      <div key={index} className="grid grid-cols-4 gap-2 mb-2">
-                        <Input
-                          placeholder="Description"
-                          value={item.description}
-                          onChange={(e) => updateItemTotal(index, 'description', e.target.value)}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Qty"
-                          value={item.quantity}
-                          onChange={(e) => updateItemTotal(index, 'quantity', parseInt(e.target.value) || 0)}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Price"
-                          value={item.price}
-                          onChange={(e) => updateItemTotal(index, 'price', parseFloat(e.target.value) || 0)}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Total"
-                          value={item.total}
-                          readOnly
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="amount">Total Amount</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                        required
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="status">Status</Label>
-                      <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Draft">Draft</SelectItem>
-                          <SelectItem value="Sent">Sent</SelectItem>
-                          <SelectItem value="Paid">Paid</SelectItem>
-                          <SelectItem value="Overdue">Overdue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      {editingInvoice ? 'Update Invoice' : 'Create Invoice'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search invoices..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+         <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search Invoices..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.id.slice(0, 8)}</TableCell>
-                  <TableCell>{invoice.customerName}</TableCell>
-                  <TableCell className="font-medium">${invoice.amount.toLocaleString()}</TableCell>
-                  <TableCell>{invoice.dueDate}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(invoice.status)}>
-                      {invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(invoice)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDelete(invoice.id)}>
-                        <Trash2 className="h-4 w-4" />
+ <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Invoice No</TableHead>
+          <TableHead>Customer</TableHead>
+          <TableHead>Invoice Date</TableHead>
+          <TableHead>Total Amount</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Show Detail</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredSI.map((si) => (
+
+          <TableRow key={si.sales_invoice_id}>
+            <TableCell className="font-medium">{si.sales_invoice_no}</TableCell>
+            <TableCell>{si.customer_name}</TableCell>
+            <TableCell>{si.invoice_date ? new Date(si.invoice_date).toLocaleDateString() : ''}</TableCell>
+            <TableCell>{si.total_amount}</TableCell>
+            <TableCell>
+              <Badge className={getStatusColor(si.status)}>{si.status}</Badge>
+            </TableCell>
+            <TableCell>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleViewSI(si.sales_invoice_id)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>          
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </CardContent>
+</Card>
+
+{showForm && (
+  <SalesInvoiceForm
+   
+    onClose={() => { setShowForm(false); }} 
+    onSave={handleSaveSI} 
+  />
+)}
+
+<Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Sales Invoice Details</DialogTitle>
+    </DialogHeader>
+    {viewingSO && (
+      <>
+        <table className="w-full border border-gray-300 mb-4 text-sm">
+          <tbody>
+            <tr>
+              <td className="p-2 font-medium text-gray-600 border">
+                Invoice Number</td>
+              <td className="p-2 border">{viewingSO.sales_invoice_no}</td>
+              </tr>
+               <tr>
+              <td className="p-2 font-medium text-gray-600 border">Invoice Date</td>
+              <td className="p-2 border">{viewingSO.invoice_date ? new Date(viewingSO.invoice_date).toLocaleDateString() : ''}</td>
+            </tr>
+            <tr>
+              <td className="p-2 font-medium text-gray-600 border">Customer Name</td>
+              <td className="p-2 border">{viewingSO.customer_name}</td>
+            </tr>
+            <tr>
+              <td className="p-2 font-medium text-gray-600 border"> Sales Person</td>
+              <td className="p-2 border">{viewingSO.sales_person_name}</td>
+            </tr>
+             <tr>
+              <td className="p-2 font-medium text-gray-600 border">Account ID</td>
+              <td className="p-2 border">{viewingSO.receivable_account_id ? viewingSO.receivable_account_id : ''}</td>
+            </tr>
+             <tr>
+              <td className="p-2 font-medium text-gray-600 border">Payment Term</td>
+              <td className="p-2 border">{viewingSO.payment_term}</td>
+            </tr>
+             <tr>
+              <td className="p-2 font-medium text-gray-600 border">Credit Limit</td>
+              <td className="p-2 border">{viewingSO.credit_limit}</td>
+            </tr>
+             <tr>
+              <td className="p-2 font-medium text-gray-600 border">Status</td>
+              <td className="p-2 border">{viewingSO.status}</td>
+            </tr>
+             <tr>
+              <td className="p-2 font-medium text-gray-600 border">Remarks</td>
+              <td className="p-2 border">{viewingSO.remarks}</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 className="text-md font-semibold mb-2">Items</h3>
+        <table className="w-full border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border text-left">Item Name</th>
+              <th className="p-2 border text-left">Quantity</th>
+              <th className="p-2 border text-left">Unit Price</th>
+              <th className="p-2 border text-left">Discount</th>
+              <th className="p-2 border text-left">Tax</th>
+            </tr>
+          </thead>
+          <tbody>
+            {viewingSO.items?.map((item, index) => (
+              <tr key={index}>
+                <td className="p-2 border">{item.item_name ?? '-'}</td>
+                <td className="p-2 border">{item.quantity}</td>
+                <td className="p-2 border">{item.unit_price}</td>
+                <td className="p-2 border">{item.discount}</td>
+                <td className="p-2 border">{item.tax}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
+   </div>
+  );
+   
+};
+interface SIItem {
+  item_id: number;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  tax: number;
+}
+
+interface SalesInvoiceFormProps {
+  //so?: SO | null;
+  onClose: () => void;
+  onSave: (payload: { 
+    dc_id?: number;  
+    customer_id: number; 
+    status: string,
+    remarks: string,
+    created_by: number,
+    total_amount: number,
+    
+    items: SIItem[];
+  }) => void;
+}
+
+export const SalesInvoiceForm: React.FC<SalesInvoiceFormProps> = ({ onClose, onSave }) => {
+  const [deliveryChallans, setDeliveryChallans] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+    
+  const [items, setItems] = useState<any[]>([]);
+
+  const [dc_id, setDcId] = useState<number | null>(null);
+  const [customer_id, setCustomerId] = useState<number>(0);
+  const [status, setStatus] = useState<string>('CREATED');
+  const [remarks, setRemarks] = useState<string>('');
+  const [created_by, setCreatedBy] = useState<number>(1);
+  const [total_amount, setTotalAmount] = useState<number>(0);
+
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [dcOpen, setDcOpen] = useState(false);
+  const [itemDropdown, setItemDropdown] = useState<number | null>(null);
+
+
+const [siItems, setSiItems] = useState<SIItem[]>([{ item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
+//  Fetch DC list
+  useEffect(() => {
+    const fetchDCs = async () => {
+      try {
+        const data = await getDeliveryChallans();
+        setDeliveryChallans(data);
+        const custData = await getCustomers();
+        setCustomers(custData);
+        const itemData = await getItems();
+        setItems(itemData);
+       
+      } catch (error) {
+        console.error("Error fetching delivery challans:", error);
+      }
+    };
+    fetchDCs();
+  }, []);
+
+
+  // 🔹 When SO changes → prefill details
+  useEffect(() => {
+    if (!dc_id) return;
+
+    const dc = deliveryChallans.find((d) => d.dc_id === dc_id);
+    if (dc) {
+      setCustomerId(Number(dc.customer_id));
+      setSiItems(
+        (dc.items ?? []).map((it: any) => ({
+          item_id: Number(it.item_id),
+          quantity: Number(it.quantity),
+          unit_price: Number(it.unit_price ?? 0),
+          discount: Number(it.discount ?? 0),
+          tax: Number(it.tax ?? 0),
+        }))
+      );
+    }
+  }, [dc_id, deliveryChallans]);
+   // 🔹 Auto-calc total_amount whenever siItems change
+    useEffect(() => {
+      const total = siItems.reduce(
+        (sum, row) => sum + (row.quantity * row.unit_price) - row.discount + row.tax,
+        0
+      );
+      const discount= siItems.reduce((sum, row) => sum + row.discount, 0);
+      const tax= siItems.reduce((sum, row) => sum + row.tax, 0);
+  
+      setTotalAmount(total);
+    //  setDiscount(discount);
+    //  setTax(tax);
+    }, [siItems]);
+   const addItemRow = () => setSiItems((p) => [...p, { item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
+    const removeItemRow = (index: number) => setSiItems((p) => p.filter((_, i) => i !== index));
+
+    const handleSelectItem = (rowIndex: number, itemId: number) => {
+      setSiItems((prev) => {
+        const copy = [...prev];
+        copy[rowIndex] = { ...copy[rowIndex], item_id: Number(itemId) };
+        return copy;
+      });
+      setItemDropdown(null);
+    };
+
+    const handleChangeRow = (index: number, field: keyof SIItem, value: number) => {
+      setSiItems((prev) => {
+        const copy = [...prev];
+        copy[index] = { ...copy[index], [field]: value };
+        return copy;
+      });
+    };
+  
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!customer_id || customer_id === 0) {
+        alert("Select customer");
+        return;
+      }
+      if (siItems.length === 0 || siItems.some((r) => !r.item_id || r.item_id === 0 || r.quantity <= 0)) {
+        alert("Add at least one item and ensure item and quantity are valid.");
+        return;
+      }
+  
+
+    onSave({
+      dc_id: dc_id ?? undefined,
+      customer_id,
+      status,
+      remarks,
+      created_by,
+      total_amount: siItems.reduce((sum, it) => sum + (it.unit_price * it.quantity) - it.discount + it.tax, 0),
+      items: siItems
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-[800px] max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-semibold mb-4">Create Sales Invoice</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Delivery Challan */}
+           {/* Delivery Challan */}
+          <Popover open={dcOpen} onOpenChange={setDcOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {dc_id ? deliveryChallans.find((dc) => Number(dc.dc_id) === dc_id)?.dc_number ?? "Select Delivery Challan" : "Select Delivery Challan"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="max-h-[300px] overflow-auto">
+              <Command>
+                <CommandInput placeholder="Search DCs..." />
+                <CommandEmpty>No DC</CommandEmpty>
+                <CommandGroup>
+                  {deliveryChallans.map((dc) => (
+                    <CommandItem
+                      key={dc.dc_id}
+                      onSelect={() => {
+                        setDcId(Number(dc.dc_id));
+                        setDcOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          dc_id === Number(dc.dc_id)
+                            ? "opacity-100"
+                            : "opacity-0"
+                        )}
+                      />
+                      {dc.dc_number}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {/* Customer (prefilled from SO) */}
+           <div className="flex space-x-4">
+  {/* Customer Popover */}
+  <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+    <PopoverTrigger asChild>
+      <Button variant="outline" role="combobox" className="w-full justify-between">
+        {customer_id
+          ? customers?.find((c) => String(c.customer_id) === String(customer_id))?.customer_name ?? "Select Customer"
+          : "Select Customer"}
+        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="max-h-[300px] overflow-auto">
+      <Command>
+        <CommandInput placeholder="Search customers..." />
+        <CommandEmpty>No customer</CommandEmpty>
+        <CommandGroup>
+          {customers.map((c) => (
+            <CommandItem
+              key={c.customer_id}
+              onSelect={() => {
+                setCustomerId(Number(c.customer_id));
+                setCustomerOpen(false);
+              }}
+            >
+              <Check className={cn("mr-2 h-4 w-4", customer_id === Number(c.customer_id) ? "opacity-100" : "opacity-0")} />
+              {c.customer_name}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </PopoverContent>
+  </Popover>
+</div>
+
+                          <div className="flex space-x-4">
+
+  {/* Remarks */}
+  <div className="flex flex-col flex-1">
+    <span className="text-xs text-gray-500">Remarks</span>
+    <textarea
+      value={remarks}
+      onChange={(e) => setRemarks(e.target.value)}
+      className="p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+      rows={2} // Set rows for height of textarea
+    />
+  </div>
+</div>
+
+{/* Items rows */}
+<div className="space-y-3">
+  {siItems.map((row, idx) => {
+    const selected = items.find((it) => Number(it.item_id) === Number(row.item_id));
+    return (
+                          <div key={idx} className="flex items-center gap-2">
+                            {/* Item dropdown */}
+                            <Popover open={itemDropdown === idx} onOpenChange={(open) => setItemDropdown(open ? idx : null)}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-1/3 justify-between">
+                                  {row.item_id ? selected?.item_name ?? "Selected item" : "Select Item"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="max-h-[300px] overflow-auto">
+                                <Command>
+                                  <CommandInput placeholder="Search items..." />
+                                  <CommandEmpty>No items</CommandEmpty>
+                                  <CommandGroup>
+                                    {items.map((it) => (
+                                      <CommandItem key={it.item_id} onSelect={() => handleSelectItem(idx, Number(it.item_id))}>
+                                        <Check className={cn("mr-2 h-4 w-4", row.item_id === Number(it.item_id) ? "opacity-100" : "opacity-0")} />
+                                        {it.item_name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                                {/* Quantity */}
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-500">Qty</span>
+                              <Input
+                                type="number"
+                                className="w-24"
+                                min={1}
+                                value={row.quantity}
+                                onChange={(e) => handleChangeRow(idx, "quantity", Number(e.target.value || 0))}
+                              />
+                            </div>
+          
+                            {/* Unit Price */}
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-500">Price</span>
+                              <Input
+                                type="number"
+                                className="w-28"
+                                min={0}
+                                step="0.01"
+                                value={row.unit_price}
+                                onChange={(e) => handleChangeRow(idx, "unit_price", Number(e.target.value || 0))}
+                              />
+                            </div>
+                            {/* Discount */}
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-500">Discount</span>
+                              <Input
+                                type="number"
+                                className="w-28"
+                                min={0}
+                                step="0.01"
+                                value={row.discount}
+                                onChange={(e) => handleChangeRow(idx, "discount", Number(e.target.value || 0))}
+                              />
+                            </div>
+                            {/* Tax */}
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-500">Tax</span>
+                              <Input
+                                type="number"
+                                className="w-28"
+                                min={0}
+                                step="0.01"
+                                value={row.tax}
+                                onChange={(e) => handleChangeRow(idx, "tax", Number(e.target.value || 0))}
+                              />
+                            </div>
+          
+                            {/* Remove row */}
+                            {items.length > 1 && (
+                              <Button type="button" variant="destructive" size="icon" onClick={() => removeItemRow(idx)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <Button type="button" variant="secondary" onClick={addItemRow}>
+                        + Add Item
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+                        {/* Actions */}
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={onClose}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                      Save
+                    </Button>
+                  </div>
+        </form>
+      </div>
     </div>
   );
 };
 
-export default InvoiceManagement;
+export default SalesInvoice;

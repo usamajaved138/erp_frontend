@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import DatePicker from "react-datepicker";  // Import DatePicker
+import "react-datepicker/dist/react-datepicker.css"; // Import DatePicker styles
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,6 +20,7 @@ import { getSOs } from '@/api/salesOrdersApi';
 import { toast } from '../ui/use-toast';
 import { createDC, getDeliveryChallans } from '@/api/deliveryChallansApi';
 import { getWarehouses } from '@/api/getWarehousesApi';
+import { set } from 'date-fns';
 
 interface DC {
   dc_id: number;
@@ -291,7 +295,7 @@ export const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onClose, onSave 
 
   const [so_id, setSoId] = useState<number | null>(null);
   const [customer_id, setCustomerId] = useState<number>(0);
-  const [dc_date, setDcDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [dc_date, setDcDate] = useState<Date | null>(new Date());
   const [warehouse_id, setWarehouseId] = useState<number>(0);
   const [status, setStatus] = useState<string>('CREATED');
   const [remarks, setRemarks] = useState<string>('');
@@ -304,21 +308,24 @@ export const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ onClose, onSave 
 
 
 const [dcItems, setDcItems] = useState<DCItem[]>([{ item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
-  //  Fetch PO list
+//  Fetch SO list
   useEffect(() => {
-    const fetchData= async () => {
+    const fetchSOs = async () => {
       try {
-        const SOdata = await getSOs();
-        setSalesOrders(SOdata);
-        
+        const data = await getSOs();
+        setSalesOrders(data);
+        const custData = await getCustomers();
+        setCustomers(custData);
+        const itemData = await getItems();
+        setItems(itemData);
+        const whData = await getWarehouses();
+        setWarehouses(whData);
       } catch (error) {
-        console.error("Error fetching purchase orders:", error);
+        console.error("Error fetching sales orders:", error);
       }
     };
-    fetchData();
+    fetchSOs();
   }, []);
-   
-  
 
   // 🔹 When SO changes → prefill details
   useEffect(() => {
@@ -341,6 +348,9 @@ const [dcItems, setDcItems] = useState<DCItem[]>([{ item_id: 0, quantity: 1, uni
     }
   }, [so_id, salesOrders]);
   // 🔹 Handlers
+   const handleDateChange = (date: Date) => {
+    setDcDate(date);
+  };
    const addItemRow = () => setDcItems((p) => [...p, { item_id: 0, quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
     const removeItemRow = (index: number) => setDcItems((p) => p.filter((_, i) => i !== index));
 
@@ -421,79 +431,102 @@ const [dcItems, setDcItems] = useState<DCItem[]>([{ item_id: 0, quantity: 1, uni
                       </PopoverContent>
                     </Popover>
           {/* Customer (prefilled from SO) */}
-           <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between">
-                         {customer_id
-  ? customers?.find((c) => String(c.customer_id) === String(customer_id))?.customer_name ?? "Select Customer"
-  : "Select Customer"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="max-h-[300px] overflow-auto">
-                        <Command>
-                          <CommandInput placeholder="Search customers..." />
-                          <CommandEmpty>No customer</CommandEmpty>
-                          <CommandGroup>
-                            {customers.map((c) => (
-                              <CommandItem
-                                key={c.customer_id}
-                                onSelect={() => {
-                                  setCustomerId(Number(c.customer_id));
-                                  setCustomerOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", customer_id === Number(c.customer_id) ? "opacity-100" : "opacity-0")} />
-                                {c.customer_name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
- {/* WareHouse (prefilled from SO) */}
-           <Popover open={warehouseOpen} onOpenChange={setWarehouseOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between">
-                          {warehouse_id ? warehouses.find((w) => Number(w.warehouse_id) === warehouse_id)?.warehouse_name ?? "Select Warehouse" : "Select Warehouse"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="max-h-[300px] overflow-auto">
-                        <Command>
-                          <CommandInput placeholder="Search warehouses..." />
-                          <CommandEmpty>No warehouse</CommandEmpty>
-                          <CommandGroup>
-                            {warehouses.map((w) => (
-                              <CommandItem
-                                key={w.warehouse_id}
-                                onSelect={() => {
-                                  setWarehouseId(Number(w.warehouse_id));
-                                  setWarehouseOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", warehouse_id === Number(w.warehouse_id) ? "opacity-100" : "opacity-0")} />
-                                {w.warehouse_name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                            {/* DC Date */}
-                         <div className="flex flex-col flex-1">
-                       <span className="text-xs text-gray-700">Order Date</span>
-                       <Input
-                         type="date"
-                               value={dc_date}
-                               onChange={(e) => setDcDate(e.target.value)}
-                                 />
-                     </div>
-                         {/* Items rows */}
-                    <div className="space-y-3">
-                      {dcItems.map((row, idx) => {
-                        const selected = items.find((it) => Number(it.item_id) === Number(row.item_id));
-                        return (
+           <div className="flex space-x-4">
+  {/* Customer Popover */}
+  <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+    <PopoverTrigger asChild>
+      <Button variant="outline" role="combobox" className="w-full justify-between">
+        {customer_id
+          ? customers?.find((c) => String(c.customer_id) === String(customer_id))?.customer_name ?? "Select Customer"
+          : "Select Customer"}
+        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="max-h-[300px] overflow-auto">
+      <Command>
+        <CommandInput placeholder="Search customers..." />
+        <CommandEmpty>No customer</CommandEmpty>
+        <CommandGroup>
+          {customers.map((c) => (
+            <CommandItem
+              key={c.customer_id}
+              onSelect={() => {
+                setCustomerId(Number(c.customer_id));
+                setCustomerOpen(false);
+              }}
+            >
+              <Check className={cn("mr-2 h-4 w-4", customer_id === Number(c.customer_id) ? "opacity-100" : "opacity-0")} />
+              {c.customer_name}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </PopoverContent>
+  </Popover>
+
+  {/* Warehouse Popover */}
+  <Popover open={warehouseOpen} onOpenChange={setWarehouseOpen}>
+    <PopoverTrigger asChild>
+      <Button variant="outline" role="combobox" className="w-full justify-between">
+        {warehouse_id ? warehouses.find((w) => Number(w.warehouse_id) === warehouse_id)?.warehouse_name ?? "Select Warehouse" : "Select Warehouse"}
+        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="max-h-[300px] overflow-auto">
+      <Command>
+        <CommandInput placeholder="Search warehouses..." />
+        <CommandEmpty>No warehouse</CommandEmpty>
+        <CommandGroup>
+          {warehouses.map((w) => (
+            <CommandItem
+              key={w.warehouse_id}
+              onSelect={() => {
+                setWarehouseId(Number(w.warehouse_id));
+                setWarehouseOpen(false);
+              }}
+            >
+              <Check className={cn("mr-2 h-4 w-4", warehouse_id === Number(w.warehouse_id) ? "opacity-100" : "opacity-0")} />
+              {w.warehouse_name}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </PopoverContent>
+  </Popover>
+</div>
+
+                          <div className="flex space-x-4">
+  {/* DC Date */}
+  <div className="flex space-x-4">
+            <div className="flex flex-col flex-1">
+              <span className="text-xs text-gray-700">DC Date</span>
+              <DatePicker
+                selected={dc_date}  // Binding the date to the state
+                onChange={handleDateChange} // Update state when the date is changed
+                dateFormat="yyyy-MM-dd"  // Format the date as required
+                className="p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholderText="Select Date" // Placeholder text
+              />
+            </div>
+          </div>
+
+  {/* Remarks */}
+  <div className="flex flex-col flex-1">
+    <span className="text-xs text-gray-500">Remarks</span>
+    <textarea
+      value={remarks}
+      onChange={(e) => setRemarks(e.target.value)}
+      className="p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+      rows={2} // Set rows for height of textarea
+    />
+  </div>
+</div>
+
+{/* Items rows */}
+<div className="space-y-3">
+  {dcItems.map((row, idx) => {
+    const selected = items.find((it) => Number(it.item_id) === Number(row.item_id));
+    return (
                           <div key={idx} className="flex items-center gap-2">
                             {/* Item dropdown */}
                             <Popover open={itemDropdown === idx} onOpenChange={(open) => setItemDropdown(open ? idx : null)}>
