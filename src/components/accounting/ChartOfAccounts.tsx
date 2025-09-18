@@ -126,14 +126,14 @@ const ChartOfAccounts: React.FC = () => {
           data.account_type,
           data.parent_account_id
         );
-        toast({ title: "Created", description: "Account created successfully!" });
+        toast({ title: "Created", description: "Account created successfully!" ,duration: 3000  });
       }
       setShowForm(false);
       setParentId(null);
       loadAccounts();
     } catch (error) {
       console.error("Error saving account", error);
-      toast({ title: "Error", description: "Failed to save account" });
+      toast({ title: "Error", description: "Failed to save account", variant: "destructive", duration: 3000 });
     }
   };
 
@@ -261,18 +261,22 @@ const AccountForm: React.FC<{
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Account Type */}
-          <select
-            value={account_type}
-            onChange={(e) => setAccountType(e.target.value)}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">Select Account Type</option>
-            <option value="ASSET">Asset</option>
-            <option value="LIABILITY">Liability</option>
-            <option value="EQUITY">Equity</option>
-            <option value="REVENUE">Revenue</option>
-            <option value="EXPENSE">Expense</option>
-          </select>
+          {parent_account_id === null && (
+    <select
+      value={account_type}
+      onChange={(e) => setAccountType(e.target.value)}
+      className="w-full border p-2 rounded"
+      required
+    >
+      <option value="">Select Account Type</option>
+      <option value="ASSET">Asset</option>
+      <option value="LIABILITY">Liability</option>
+      <option value="EQUITY">Equity</option>
+      <option value="REVENUE">Revenue</option>
+      <option value="EXPENSE">Expense</option>
+    </select>
+  )}
+         
 
           <Input
             value={account_name}

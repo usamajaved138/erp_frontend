@@ -294,27 +294,42 @@ const SalesPersonForm: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg w-96">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-[900px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">
           {salesPerson ? "Edit Sales Person" : "Add Sales Person"}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex space-x-4">
+             <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Sales Person Name</span>
           <Input
+          
             value={sales_person_name}
             onChange={(e) => setSalesPersonName(e.target.value)}
             placeholder="Sales Person Name"
           />
+          </div>
+          <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Father Name</span>
           <Input
             value={father_name}
             onChange={(e) => setFatherName(e.target.value)}
             placeholder="Father Name"
           />
+          </div>
+           <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Phone</span>
           <Input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Phone"
           />
+          </div>
+          </div>
+           <div className="flex space-x-4">
+             <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Designation</span>
            <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
                       <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
@@ -326,7 +341,7 @@ const SalesPersonForm: React.FC<{
             </PopoverTrigger>
             <PopoverContent className="max-h-[300px] overflow-auto">
               <Command >
-                <CommandInput placeholder="Search accounts..." className="text-black" />
+                <CommandInput placeholder="Search designation..." className="text-black" />
                 <CommandEmpty >No designation found.</CommandEmpty>
                 <CommandGroup>
                   {designations.map((d) => (
@@ -351,6 +366,9 @@ const SalesPersonForm: React.FC<{
               </Command>
             </PopoverContent>
           </Popover>
+          </div>
+           <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Branch</span>
          <Popover open={branchOpen} onOpenChange={setBranchOpen}>
                       <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
@@ -362,7 +380,7 @@ const SalesPersonForm: React.FC<{
             </PopoverTrigger>
             <PopoverContent className="max-h-[300px] overflow-auto">
               <Command >
-                <CommandInput placeholder="Search accounts..." className="text-black" />
+                <CommandInput placeholder="Search branches..." className="text-black" />
                 <CommandEmpty >No branch found.</CommandEmpty>
                 <CommandGroup>
                   {branches.map((br) => (
@@ -387,6 +405,11 @@ const SalesPersonForm: React.FC<{
               </Command>
             </PopoverContent>
           </Popover>
+          </div>
+          </div>
+                     <div className="flex space-x-4">
+ <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Company</span>
          <Popover open={companyOpen} onOpenChange={setCompanyOpen}>
                       <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
@@ -398,7 +421,7 @@ const SalesPersonForm: React.FC<{
             </PopoverTrigger>
             <PopoverContent className="max-h-[300px] overflow-auto">
               <Command >
-                <CommandInput placeholder="Search accounts..." className="text-black" />
+                <CommandInput placeholder="Search company..." className="text-black" />
                 <CommandEmpty >No company found.</CommandEmpty>
                 <CommandGroup>
                   {companies.map((c) => (
@@ -423,7 +446,10 @@ const SalesPersonForm: React.FC<{
               </Command>
             </PopoverContent>
           </Popover>
+          </div>
+           <div className="flex flex-col flex-1">
           {/* Region Popover */}
+          <span className="text-sm font-medium text-gray-700">Region</span>
           <Popover open={regionOpen} onOpenChange={setRegionOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
@@ -435,7 +461,7 @@ const SalesPersonForm: React.FC<{
             </PopoverTrigger>
             <PopoverContent className="max-h-[300px] overflow-auto">
               <Command >
-                <CommandInput placeholder="Search accounts..." className="text-black" />
+                <CommandInput placeholder="Search region..." className="text-black" />
                 <CommandEmpty >No region found.</CommandEmpty>
                 <CommandGroup>
                   {regions.map((r) => (
@@ -460,14 +486,16 @@ const SalesPersonForm: React.FC<{
               </Command>
             </PopoverContent>
           </Popover>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600">
-              Save
-            </Button>
           </div>
+          </div>
+           <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" onClick={onClose}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="flex-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                        Save
+                      </Button>
+                    </div>
         </form>
       </div>
     </div>

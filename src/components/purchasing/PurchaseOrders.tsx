@@ -25,6 +25,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { toast } from '@/hooks/use-toast';
 
 interface PO {
   po_id?: number;
@@ -54,7 +55,9 @@ const handleSavePO = async (payload: { vendor_id: number; items: POItem[] }) => 
   try {
     // created_by: replace 1 with logged-in user id
     await createPurchaseOrder(payload.vendor_id, 1, payload.items);
+
     setShowForm(false);
+      toast({ title: "Created", description: "Purchase Order created successfully!", duration: 3000 });
     const data = await getPurchaseOrders();
     setPurchaseOrders(data);
   } catch (err) {

@@ -12,6 +12,7 @@ import { useAppContext, Vendor } from '@/contexts/AppContext';
 import { getPRs,createPR, updatePR,deletePR } from '@/api/prApi';
 import { getDepartments } from '@/api/departmentApi';
 import { getItems } from '@/api/itemsApi';
+
 import {
   Popover,
   PopoverContent,
@@ -86,7 +87,7 @@ const handleEditPR = (pr: PR) => {
           prData.approved_by,
           prData.dep_id // Add dep_id as the 9th argument
         );
-         toast({ title: "Updated", description: "PR updated successfully!" });
+         toast({ title: "Updated", description: "PR updated successfully!" , duration: 3000 });
       } else {
         await createPR(
           prData.created_by,
@@ -97,11 +98,12 @@ const handleEditPR = (pr: PR) => {
           prData.approved_by,
           prData.dep_id
         );
-        toast({ title: "Created", description: "PR created successfully!" });
+        toast({ title: "Created", description: "PR created successfully!", duration: 3000 });
       }
       setShowForm(false);
       loadPRs();
     } catch (error) {
+      toast({ title: "Error", description: "Failed to save PR", variant: "destructive", duration: 3000 });
       console.error("Error saving PR", error);
     }
   };
@@ -111,10 +113,11 @@ const handleEditPR = (pr: PR) => {
     if (confirm("Are you sure you want to delete this PR?")) {
       try {
         await deletePR(prId);
-        toast({ title: "Deleted", description: "PR deleted successfully!" });
+        toast({ title: "Deleted", description: "PR deleted successfully!", duration: 3000 });
         loadPRs();
       } catch (error) {
         console.error("Error deleting PR", error);
+        toast({ title: "Error", description: "Failed to delete PR", variant: "destructive", duration: 3000 });
       }
     }
   };

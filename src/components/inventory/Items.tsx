@@ -4,12 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Edit, Eye, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit, Eye, Trash2, Package, ChevronsUpDown, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import GenericForm from '@/components/forms/GenericForm';
 import { getItems,addItem,updateItem,deleteItem } from '@/api/itemsApi'; 
-import { getItemCategories } from '@/api/getItemCategoriesApi';
+import { getItemCategory } from '@/api/itemCategoryApi';
 import { getWarehouses } from '@/api/getWarehousesApi';
+import {Popover,PopoverContent,PopoverTrigger,} from "@/components/ui/popover";
+import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+
 
 interface Item {
    item_id:number,
@@ -71,7 +75,7 @@ const Items: React.FC = () => {
           itemData.unit,
           itemData.price
         );
-         toast({ title: "Updated", description: "Item updated successfully!" });
+         toast({ title: "Updated", description: "Item updated successfully!" ,duration: 3000,});
       } else {
         await addItem(
           itemData.item_code,
@@ -82,7 +86,7 @@ const Items: React.FC = () => {
           itemData.unit,
           itemData.price
         );
-        toast({ title: "Created", description: "Item created successfully!" });
+        toast({ title: "Created", description: "Item created successfully!" ,duration: 3000});
       }
       setShowForm(false);
       loadItems();
@@ -95,7 +99,7 @@ const Items: React.FC = () => {
     if (confirm("Are you sure you want to delete this item?")) {
       try {
         await deleteItem(itemId);
-        toast({ title: "Deleted", description: "Item deleted successfully!" });
+        toast({ title: "Deleted", description: "Item deleted successfully!", duration: 3000,});
         loadItems();
       } catch (error) {
         console.error("Error deleting item", error);
@@ -210,25 +214,28 @@ const ItemForm: React.FC<{
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("");
   const [price, setPrice] = useState<number>(0);
-  const [category_id, setCategoryId] = useState<number>(0);
-  const [category_name, setCategories] = useState<any[]>([]);
-  const [warehouse_id, setWarehouseId] = useState<number>(0);
-  const [warehouse_name, setWarehouses] = useState<any[]>([]);
+
+   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [category_id, setCategoryId] = useState<number>(0);  // Initially set to 0
+  const [categories, setCategories] = useState<any[]>([]);
+
+  const [warehouseOpen, setWarehouseOpen] = useState(false);
+  const [warehouse_id, setWarehouseId] = useState<number>(0);  // Initially set to 0
+  const [warehouses, setWarehouses] = useState<any[]>([]);
 
   // Fetch categories
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const categoriesData = await getItemCategories();
+        const categoriesData = await getItemCategory();
         const warehousesData = await getWarehouses();
         setCategories(categoriesData);
         setWarehouses(warehousesData);
-
-        if (item) {
-        setItemCode(item.item_code || "");
+   if (item) {
+          setItemCode(item.item_code || "");
           setItemName(item.item_name || "");
           setDescription(item.description || "");
-          setPrice(item.price );
+          setPrice(item.price);
           setUnit(item.unit || "");
           setCategoryId(item.category_id || 0);
           setWarehouseId(item.warehouse_id || 0);
@@ -297,34 +304,80 @@ const ItemForm: React.FC<{
             placeholder="Unit"
           />
 
-          {/* Category Dropdown */}
-          <select
-            value={category_id}
-            onChange={(e) => setCategoryId(Number(e.target.value))}
-            className="w-full border p-2 rounded"
-          >
-            <option value={0}>Select Category</option>
-            {category_name.map((c) => (
-              <option key={c.category_id} value={c.category_id}>
-                {c.category_name}
-              </option>
-            ))}
-          </select>
-
-          {/* Warehouse Dropdown */}
-          <select
-            value={warehouse_id}
-            onChange={(e) => setWarehouseId(Number(e.target.value))}
-            className="w-full border p-2 rounded"
-          >
-            <option value={0}>Select Warehouse</option>
-            {warehouse_name.map((c) => (
-              <option key={c.warehouse_id} value={c.warehouse_id}>
-                {c.warehouse_name}
-              </option>
-            ))}
-          </select>
-
+           {/* Category Dropdown */}
+               <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                          <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {category_id
+                      ? `${categories.find((c) => c.category_id === category_id)?.category_name}`
+                      : "Select Category"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="max-h-[300px] overflow-auto">
+                  <Command >
+                    <CommandInput placeholder="Search categories..." className="text-black" />
+                    <CommandEmpty >No category found.</CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((cat) => (
+                        <CommandItem
+                          key={cat.category_id}
+                          className="hover:bg-gray-100"
+                          onSelect={() => {
+                            setCategoryId(cat.category_id);
+                            setCategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                               "mr-2 h-4 w-4",
+                              category_id === cat.category_id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {cat.category_name} 
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            {/* Warehouse Dropdown */}
+           <Popover open={warehouseOpen} onOpenChange={setWarehouseOpen}>
+                      <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {warehouse_id
+                  ? `${warehouses.find((w) => Number(w.warehouse_id) === warehouse_id)?.warehouse_name}`
+                  : "Select Warehouse"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="max-h-[300px] overflow-auto">
+              <Command >
+                <CommandInput placeholder="Search warehouses..." className="text-black" />
+                <CommandEmpty >No warehouse found.</CommandEmpty>
+                <CommandGroup>
+                  {warehouses.map((w) => (
+                    <CommandItem
+                      key={w.warehouse_id}
+                      className="hover:bg-gray-100"
+                      onSelect={() => {
+                        setWarehouseId(w.warehouse_id);
+                        setWarehouseOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                           "mr-2 h-4 w-4",
+                          warehouse_id === w.warehouse_id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {w.warehouse_name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <div className="flex  gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
                           Cancel

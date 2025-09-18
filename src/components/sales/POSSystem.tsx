@@ -1,84 +1,132 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, ShoppingCart, CreditCard, Banknote, Smartphone, Printer, Pause, Play } from 'lucide-react';
+import { getItems } from '@/api/itemsApi';
+import { createPOS } from '@/api/posApi';   // 🔹 import API
+import { toast, useToast } from "@/hooks/use-toast";
+
 
 interface CartItem {
-  id: string;
-  name: string;
+  item_id: number;
+  item_name: string;
   price: number;
-  quantity: number;
+  qty: number;
+  discount: number;
   total: number;
 }
-
-interface Product {
-  id: string;
-  name: string;
+interface Item {
+  item_id: number;
+  item_code: string;
+  item_name: string;
+  description: string;
+  unit: string;
   price: number;
-  category: string;
-  barcode: string;
-  stock: number;
+  category_id?: number;
+  category_name?: string;
+  warehouse_id?: number;
+  warehouse_name?: string;
 }
 
 const POSSystem: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isTransactionHeld, setIsTransactionHeld] = useState(false);
-  
-  const [products] = useState<Product[]>([
-    { id: '1', name: 'Laptop Computer', price: 999.99, category: 'Electronics', barcode: '123456789', stock: 15 },
-    { id: '2', name: 'Wireless Mouse', price: 29.99, category: 'Electronics', barcode: '987654321', stock: 50 },
-    { id: '3', name: 'Office Chair', price: 199.99, category: 'Furniture', barcode: '456789123', stock: 8 },
-    { id: '4', name: 'Desk Lamp', price: 49.99, category: 'Furniture', barcode: '789123456', stock: 25 },
-  ]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(false); // 🔹 loader
+  const [message, setMessage] = useState<string | null>(null); // 🔹 status message
+ // const [discount, setDiscount] = useState(0);
 
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.barcode.includes(searchTerm)
+  // Load Items
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    try {
+      const data = await getItems();
+      setItems(data);
+    } catch (error) {
+      console.error("Error loading items", error);
+    }
+  };
+
+  const filteredProducts = items.filter(Item =>
+    Item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    Item.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addToCart = (product: Product) => {
-    const existingItem = cart.find(item => item.id === product.id);
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
-          : item
-      ));
-    } else {
-      setCart([...cart, {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1,
-        total: product.price
-      }]);
-    }
-  };
+  const addToCart = (prod: Item) => {
+    const price = Number(prod.price) || 0;
+    setCart(prev => {
+      const existing = prev.find(it => it.item_id === prod.item_id);
+      if (existing) {
+        return prev.map(it =>
+          it.item_id === prod.item_id
+            ? {
+                ...it,
+                qty: it.qty + 1,
+                total: Number(((it.price - it.discount) * (it.qty + 1)).toFixed(2))
+              }
+            : it
+        );
+      }
+      return [
+        ...prev,
+        {
+          item_id: prod.item_id,
+          item_name: prod.item_name,
+          price,
+          qty: 1,
+          discount: 0,
+          total: Number(price.toFixed(2))
+        }
+      ];
+    });
+  };
 
-  const removeFromCart = (id: string) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
 
-  const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(id);
-      return;
-    }
-    setCart(cart.map(item => 
-      item.id === id 
-        ? { ...item, quantity, total: quantity * item.price }
-        : item
-    ));
-  };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const tax = subtotal * 0.1; // 10% tax
-  const total = subtotal + tax;
+  const removeFromCart = (id: number) => {
+  setCart(prev => prev.filter(it => it.item_id !== id));
+};
 
+
+  const updateQuantity = (id: number, newQty: number) => {
+    const qty = Number(newQty) || 0;
+    if (qty <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCart(prev =>
+      prev.map(it =>
+        it.item_id === id
+          ? { ...it, qty, total: Number(((it.price - it.discount) * qty).toFixed(2)) }
+          : it
+      )
+    );
+  };
+
+const updateDiscount = (id: number, newDiscount: number) => {
+    const discount = Number(newDiscount) || 0;
+    setCart(prev =>
+      prev.map(it =>
+        it.item_id === id
+          ? { ...it, discount, total: Number(((it.price - discount) * it.qty).toFixed(2)) }
+          : it
+      )
+    );
+  };
+
+  
+  const total_discount = cart.reduce((sum, it) => sum + Number((it.discount * it.qty).toFixed(2)), 0);
+const subtotal = cart.reduce((sum, it) => sum + Number((it.price * it.qty - total_discount).toFixed(2)), 0);
+  const taxableAmount = subtotal - total_discount;
+  const total_tax = Number((taxableAmount * 0.10).toFixed(2));
+  const total = Number((taxableAmount + total_tax).toFixed(2));
   const holdTransaction = () => {
     setIsTransactionHeld(true);
     setCart([]);
@@ -89,10 +137,42 @@ const POSSystem: React.FC = () => {
     // In real implementation, would load held transaction
   };
 
-  const processPayment = (method: string) => {
-    // Process payment logic here
-    setCart([]);
-    alert(`Payment of $${total.toFixed(2)} processed via ${method}`);
+  // 🔹 New: Save to DB via API
+  const processPayment = async (method: string) => {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    try {
+      setLoading(true);
+      setMessage(null);
+
+      const payloadItems = cart.map(item => ({
+        item_id: item.item_id,
+        qty: item.qty,
+        unit_price: item.price,
+        discount: item.discount,
+        tax: 0,
+      }));
+
+      const res = await createPOS(
+        method,          // payment_method
+        total_discount,  // total_discount
+        total_tax,       // total_tax
+        total,           // total_amount
+        1,               // created_by (hardcoded, replace with logged user id)
+        payloadItems     // items JSON
+      );
+      toast({ title: "Created", description: "Sales Invoice created successfully!",duration: 3000, });
+
+     // setMessage(` POS Invoice Created! Invoice No: ${res?.pos_invoice_no || "N/A"}`);
+      setCart([]);
+    } catch (error: any) {
+      console.error("POS error:", error);
+      setMessage(` Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -113,17 +193,16 @@ const POSSystem: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => addToCart(product)}>
+            {filteredProducts.map((item) => (
+              <Card key={item.item_id} className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => addToCart(item)}>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium text-sm">{product.name}</h3>
-                    <Badge variant="outline">{product.category}</Badge>
+                    <h3 className="font-medium text-sm">{item.item_name}</h3>
+                    <Badge variant="outline">{item.category_name}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">${product.price}</span>
-                    <span className="text-sm text-gray-500">Stock: {product.stock}</span>
+                    <span className="text-lg font-bold">{item.price}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -167,24 +246,34 @@ const POSSystem: React.FC = () => {
                         <TableHead>Item</TableHead>
                         <TableHead>Qty</TableHead>
                         <TableHead>Price</TableHead>
+                        <TableHead>Discount</TableHead>
                         <TableHead>Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {cart.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableRow key={item.item_id}>
+                          <TableCell className="font-medium">{item.item_name}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
+                              value={item.qty}
+                              onChange={(e) => updateQuantity(item.item_id, parseInt(e.target.value))}
                               className="w-16 h-8"
                               min="0"
                             />
                           </TableCell>
-                          <TableCell>${item.price.toFixed(2)}</TableCell>
-                          <TableCell>${item.total.toFixed(2)}</TableCell>
+                          <TableCell>{item.price}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.discount}
+                              onChange={(e) => updateDiscount(item.item_id, Number(e.target.value))}
+                              className="w-16 h-8"
+                              min="0"
+                            />
+                          </TableCell>
+                          <TableCell>{item.total}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -195,29 +284,33 @@ const POSSystem: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>{subtotal}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax (10%):</span>
-                      <span>${tax.toFixed(2)}</span>
+                      <span>{total_tax}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>Discount:</span>
+                      <span>{total_discount.toFixed(2)}</span>
+                    </div>
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>{total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => processPayment('Cash')} className="bg-green-500 hover:bg-green-600">
+                  <Button disabled={loading} onClick={() => processPayment('Cash')} className="bg-green-500 hover:bg-green-600">
                     <Banknote className="h-4 w-4 mr-2" />
                     Cash
                   </Button>
-                  <Button onClick={() => processPayment('Card')} className="bg-blue-500 hover:bg-blue-600">
+                  <Button disabled={loading} onClick={() => processPayment('Card')} className="bg-blue-500 hover:bg-blue-600">
                     <CreditCard className="h-4 w-4 mr-2" />
                     Card
                   </Button>
-                  <Button onClick={() => processPayment('Mobile')} className="bg-purple-500 hover:bg-purple-600">
+                  <Button disabled={loading} onClick={() => processPayment('Mobile')} className="bg-purple-500 hover:bg-purple-600">
                     <Smartphone className="h-4 w-4 mr-2" />
                     Mobile
                   </Button>
@@ -229,6 +322,11 @@ const POSSystem: React.FC = () => {
               </>
             )}
           </div>
+          {message && (
+            <div className="mt-4 text-center font-semibold">
+              {message}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

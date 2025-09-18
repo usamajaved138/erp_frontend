@@ -79,7 +79,7 @@ const SalesModule: React.FC = () => {
           <ColorfulTabsTrigger value="reports">Reports</ColorfulTabsTrigger>
           <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="bg-cyan-100  text-cyan-700 transform hover:bg-cyan-600 hover:text-white hover:scale-105  active:scale-95 min-w-fit">
+            <Button variant="outline" className="bg-cyan-50  text-cyan-700 transform hover:bg-cyan-600 hover:text-white hover:scale-105  active:scale-95 min-w-fit">
               More
               </Button>
           </DropdownMenuTrigger>

@@ -85,20 +85,20 @@ const ItemCategories: React.FC = () => {
           data.account_id,
           data.description
         );
-        toast({ title: "Updated", description: "Category updated successfully!" });
+        toast({ title: "Updated", description: "Category updated successfully!" ,duration: 3000});
       } else {
         await addItemCategory(
           data.category_name,
           data.account_id,
           data.description
         );
-        toast({ title: "Created", description: "Category created successfully!" });
+        toast({ title: "Created", description: "Category created successfully!", duration: 3000 });
       }
       setShowForm(false);
       loadCategories();
     } catch (error) {
       console.error("Error saving category", error);
-      toast({ title: "Error", description: "Failed to save category", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save category", variant: "destructive", duration: 3000 });
     }
   };
 
@@ -107,10 +107,10 @@ const ItemCategories: React.FC = () => {
       try {
         await deleteItemCategory(categoryId);
         loadCategories();
-        toast({ title: "Deleted", description: "Category deleted successfully!" });
+        toast({ title: "Deleted", description: "Category deleted successfully!", duration: 3000 });
       } catch (error) {
         console.error("Error deleting category", error);
-        toast({ title: "Error", description: "Failed to delete category", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to delete category", variant: "destructive", duration: 3000 });
       }
     }
   };

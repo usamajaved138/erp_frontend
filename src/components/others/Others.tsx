@@ -1,6 +1,7 @@
 import Branch from '@/components/others/Branches';
 import Company from '@/components/others/Company';
 import Department from '@/components/others/Department';
+import Vouchers from '@/components/others/Vouchers';
 import { useState } from 'react';
 import { ColorfulTabs, ColorfulTabsContent, ColorfulTabsList, ColorfulTabsTrigger } from '../ui/colorful-tabs';
 import { Building } from 'lucide-react';
@@ -15,12 +16,13 @@ const Others: React.FC = () => {
         </div>
 
         <ColorfulTabs value={activeTab} onValueChange={setActiveTab}>
-          <ColorfulTabsList className="grid w-full grid-cols-3 mb-4 overflow-hidden">
+          <ColorfulTabsList className="grid w-full grid-cols-4 mb-4 overflow-hidden">
             
             
             <ColorfulTabsTrigger value="branches" icon={Building}>Branches</ColorfulTabsTrigger>
             <ColorfulTabsTrigger value="company" icon={Building}>Company</ColorfulTabsTrigger>
             <ColorfulTabsTrigger value="department" icon={Building}>Departments</ColorfulTabsTrigger>
+            <ColorfulTabsTrigger value="vouchers" icon={Building}>Vouchers</ColorfulTabsTrigger>
           </ColorfulTabsList>
           <ColorfulTabsContent value="branches">
             <Branch />
@@ -32,6 +34,9 @@ const Others: React.FC = () => {
 
           <ColorfulTabsContent value="department">
             <Department />
+          </ColorfulTabsContent>
+          <ColorfulTabsContent value="vouchers">
+            <Vouchers />
           </ColorfulTabsContent>
         </ColorfulTabs>
       </div>

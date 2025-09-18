@@ -74,16 +74,16 @@ const Warehouses: React.FC = () => {
             data.warehouse_name,
             data.address
           );
-          toast({ title: "Updated", description: "Warehouse updated successfully!" });
+          toast({ title: "Updated", description: "Warehouse updated successfully!" , duration: 3000 });
         } else {
           await addWarehouse(data.warehouse_code, data.warehouse_name, data.address);
-          toast({ title: "Created", description: "Warehouse created successfully!" });
+          toast({ title: "Created", description: "Warehouse created successfully!", duration: 3000  });
         }
         setShowForm(false);
         loadWarehouses();
       } catch (error) {
         console.error("Error saving warehouse", error);
-        toast({ title: "Error", description: "Failed to save warehouse" });
+        toast({ title: "Error", description: "Failed to save warehouse", variant: "destructive", duration: 3000 });
       }
     };
   const handleDeleteWarehouse = async (warehouseId: number) => {
@@ -91,10 +91,10 @@ const Warehouses: React.FC = () => {
       try {
         await deleteWarehouse(warehouseId);
         loadWarehouses();
-        toast({ title: "Deleted", description: "Warehouse deleted successfully!" });
+        toast({ title: "Deleted", description: "Warehouse deleted successfully!", duration: 3000 });
       } catch (error) {
         console.error("Error deleting warehouse", error);
-        toast({ title: "Error", description: "Failed to delete warehouse" });
+        toast({ title: "Error", description: "Failed to delete warehouse", variant: "destructive", duration: 3000 });
       }
     }
   };

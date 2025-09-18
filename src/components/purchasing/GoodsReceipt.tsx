@@ -79,11 +79,11 @@ const GoodsReceipt: React.FC = () => {
   ) => {
     try {
       await createGRN(po_id, vendor_id, created_by, remarks, items);
-      toast({ title: 'Created', description: 'GRN created successfully!' });
+      toast({ title: 'Created', description: 'GRN created successfully!', duration: 3000 });
       setShowForm(false);
       loadGRNs();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to create GRN." + error.message });
+      toast({ title: "Error", description: "Failed to create GRN." + error.message, variant: "destructive", duration: 3000 });
       console.error('Error saving GRN', error);
     }
   };
