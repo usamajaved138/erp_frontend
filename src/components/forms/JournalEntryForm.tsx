@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { X, Plus, Trash2 } from 'lucide-react';
 
 interface JournalLine {
-  account: string;
-  description: string;
+  account_id: number;
   debit: number;
   credit: number;
+  description: string;
+  
 }
 
 interface JournalEntryFormProps {

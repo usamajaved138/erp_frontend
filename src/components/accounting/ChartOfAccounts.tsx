@@ -80,7 +80,9 @@ const ChartOfAccounts: React.FC = () => {
   };
 
   const filteredAccounts = accounts.filter(account =>
-    account.account_name.toLowerCase().includes(searchTerm.toLowerCase())
+    account.account_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    account.account_code.includes(searchTerm) ||
+    account.account_type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getTypeColor = (account_type: string) => {
