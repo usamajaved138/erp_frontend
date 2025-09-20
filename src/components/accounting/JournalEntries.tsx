@@ -79,7 +79,10 @@ const JournalEntries: React.FC = () => {
       default: return null;
     }
   };
-
+ const filteredJE = entries.filter((entry) =>
+    entry.reference_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    entry.voucher_name.toLowerCase().includes(searchTerm.toLowerCase()) 
+  );
   const handleNewEntry = () => {
     setEditingEntry(null);
     setShowForm(true);
@@ -161,7 +164,7 @@ const JournalEntries: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((entry) => (
+              {filteredJE.map((entry) => (
                 <TableRow key={entry.journal_entry_id}>
                  <TableCell>{entry.entry_date ? new Date(entry.entry_date).toLocaleDateString() : ''}</TableCell>
                   <TableCell className="font-mono">{entry.reference_number}</TableCell>
@@ -414,7 +417,7 @@ const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onClose, onSave, en
               key={a.account_id}
               className="hover:bg-gray-100"
               onSelect={() => {
-                updateLine(index, 'account_id', a.account_id); // ✅ update this line only
+                updateLine(index, 'account_id', a.account_id); 
                 setAccountOpen(null); // close after selection
               }}
             >

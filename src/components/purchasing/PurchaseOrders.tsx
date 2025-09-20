@@ -274,8 +274,8 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ po, onClos
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-[600px]">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-white p-6 rounded-lg w-[600px] overflow-y-auto">
         <h2 className="text-lg font-semibold mb-4">{po ? "Edit Purchase Order" : "Create Purchase Order"}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -366,7 +366,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({ po, onClos
 
                   {/* remove */}
                   {poItems.length > 1 && (
-                    <Button type="button" variant="destructive" size="icon" onClick={() => removeItemRow(idx)}>
+                    <Button
+                     type="button" 
+                     variant="ghost" 
+                     size="sm" 
+                     onClick={() => removeItemRow(idx)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
