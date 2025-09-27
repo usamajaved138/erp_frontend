@@ -1,0 +1,128 @@
+
+    :root {
+      --primary: #007bff;
+      --text: #333;
+      --gray: #777;
+      --input-bg: #fff;
+      --border: #ccc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      background: #f8f9fc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-wrapper {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 460px;
+      padding: 40px 35px;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .logo img {
+      max-width: 180px;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6c757d;
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+
+    .plant-name {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #5f259f;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px 12px 38px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .form-group input::placeholder {
+      color: #999;
+    }
+
+    .input-icon {
+      position: relative;
+    }
+
+    .input-icon i {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 15px;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 25px;
+    }
+
+    .remember input {
+      accent-color: var(--primary);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056d6;
+    }
+
+    .footer {
+      margin-top: 25px;
+      font-size: 13px;
+      text-align: center;
+      color: var(--gray);
+    }
+ 

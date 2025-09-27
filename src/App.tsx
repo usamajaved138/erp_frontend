@@ -8,7 +8,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import GRNDetail from "./components/purchasing/GRNDetail";
-import GoodsReceipt from "./components/purchasing/GoodsReceipt";
+import Login from "./components/security/LoginPage";
+import PrivateRoute from "./components/security/PrivateRoute";
 
 
 const queryClient = new QueryClient();
@@ -21,12 +22,17 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/grn/:grn_id" element={<GRNDetail />} />
-            
-            <Route path="*" element={<NotFound />} />
-            
-           
+            <Route path="/login" element={<Login />} />
+            <Route path="/"      element={<PrivateRoute><Index /></PrivateRoute>}/>
+            <Route
+  path="/grn/:grn_id"
+  element={
+    <PrivateRoute>
+      <GRNDetail />
+    </PrivateRoute>
+  }
+/>
+           <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

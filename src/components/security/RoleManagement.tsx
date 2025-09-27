@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,168 +8,276 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Shield, Plus, Edit, Trash2, Users, CheckCircle, Slash } from 'lucide-react';
+import { addRole, getRoles, updateRole } from '@/api/rolesApi';
+import { toast } from '../ui/use-toast';
+import { date } from 'zod';
 
-interface Permission {
-  module: string;
-  read: boolean;
-  write: boolean;
-  delete: boolean;
-  export: boolean;
-  approve: boolean;
-}
 
 interface Role {
-  id: string;
-  name: string;
+  role_id: number | null;
+  role_name: string;
   description: string;
-  permissions: Permission[];
-  userCount: number;
-  isSystem: boolean;
-  hierarchy: number;
+  created_by: number;
+  updated_by: number | null;
+
+  // Permissions (int 0/1)
+  sales_read: number;
+  sales_write: number;
+  sales_delete: number;
+  sales_export: number;
+  sales_approve: number;
+
+  accounting_read: number;
+  accounting_write: number;
+  accounting_delete: number;
+  accounting_export: number;
+  accounting_approve: number;
+
+  hr_read: number;
+  hr_write: number;
+  hr_delete: number;
+  hr_export: number;
+  hr_approve: number;
+
+  inventory_read: number;
+  inventory_write: number;
+  inventory_delete: number;
+  inventory_export: number;
+  inventory_approve: number;
+
+  crm_read: number;
+  crm_write: number;
+  crm_delete: number;
+  crm_export: number;
+  crm_approve: number;
+
+  purchasing_read: number;
+  purchasing_write: number;
+  purchasing_delete: number;
+  purchasing_export: number;
+  purchasing_approve: number;
+
+  reports_read: number;
+  reports_write: number;
+  reports_delete: number;
+  reports_export: number;
+  reports_approve: number;
+
+  security_read: number;
+  security_write: number;
+  security_delete: number;
+  security_export: number;
+  security_approve: number;
 }
 
 const RoleManagement: React.FC = () => {
-  const [roles, setRoles] = useState<Role[]>([
-    {
-      id: '1',
-      name: 'Admin',
-      description: 'Full system access',
-      permissions: [
-        { module: 'Sales', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'Accounting', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'HR', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'Inventory', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'CRM', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'Purchasing', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'Reports', read: true, write: true, delete: true, export: true, approve: true }
-      ],
-      userCount: 3,
-      isSystem: true,
-      hierarchy: 1
-    },
-    {
-      id: '2',
-      name: 'Sales Manager',
-      description: 'Sales module management',
-      permissions: [
-        { module: 'Sales', read: true, write: true, delete: true, export: true, approve: true },
-        { module: 'CRM', read: true, write: true, delete: false, export: true, approve: false },
-        { module: 'Reports', read: true, write: false, delete: false, export: true, approve: false }
-      ],
-      userCount: 5,
-      isSystem: false,
-      hierarchy: 2
-    },
-    {
-      id: '3',
-      name: 'Sales Rep',
-      description: 'Sales operations',
-      permissions: [
-        { module: 'Sales', read: true, write: true, delete: false, export: false, approve: false },
-        { module: 'CRM', read: true, write: true, delete: false, export: false, approve: false }
-      ],
-      userCount: 12,
-      isSystem: false,
-      hierarchy: 3
-    }
-  ]);
+
+const [roles, setRoles] = useState<Role[]>([]);
 
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+ const [showForm, setShowForm] = useState(false);
+   const [editRole, setEditRole] = useState<Role | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const modules = ['Sales', 'Accounting', 'HR', 'Inventory', 'CRM', 'Purchasing', 'Reports', 'Security'];
-  const permissionTypes = ['read', 'write', 'delete', 'export', 'approve'];
+ 
+
+   const loadRoles = async () => {
+       try {
+         const res = await getRoles();
+         setRoles(res.data || res);
+       } catch (error) {
+         console.error("Error loading users", error);
+       }
+     };
+     useEffect(() => {
+       loadRoles();
+     }, []);
+
+     const handleAddRole = () => {
+    setEditRole(null);
+    setShowForm(true);
+  };
+  const handleEditRole = (role: Role) => {
+    setEditRole(role);
+    setShowForm(true);
+  };
+
+   const handleSaveRole = async (data: Omit<Role, "role">) => {
+  try {
+    if (editRole) {
+      // Update existing role
+      await updateRole(
+        editRole.role_id,
+        data.role_name,
+        data.description,
+        data.updated_by,
+
+        data.sales_read,
+        data.sales_write,
+        data.sales_delete,
+        data.sales_export,
+        data.sales_approve,
+
+        data.accounting_read,
+        data.accounting_write,
+        data.accounting_delete,
+        data.accounting_export,
+        data.accounting_approve,
+
+        data.hr_read,
+        data.hr_write,
+        data.hr_delete,
+        data.hr_export,
+        data.hr_approve,
+
+        data.inventory_read,
+        data.inventory_write,
+        data.inventory_delete,
+        data.inventory_export,
+        data.inventory_approve,
+
+        data.crm_read,
+        data.crm_write,
+        data.crm_delete,
+        data.crm_export,
+        data.crm_approve,
+
+        data.purchasing_read,
+        data.purchasing_write,
+        data.purchasing_delete,
+        data.purchasing_export,
+        data.purchasing_approve,
+
+        data.reports_read,
+        data.reports_write,
+        data.reports_delete,
+        data.reports_export,
+        data.reports_approve,
+
+        data.security_read,
+        data.security_write,
+        data.security_delete,
+        data.security_export,
+        data.security_approve
+      );
+
+      toast({ title: "Updated", description: "Role updated successfully!" });
+    } else {
+      // Add new role
+      await addRole(
+        data.role_name,
+        data.description,
+        data.created_by,
+
+        data.sales_read,
+        data.sales_write,
+        data.sales_delete,
+        data.sales_export,
+        data.sales_approve,
+
+        data.accounting_read,
+        data.accounting_write,
+        data.accounting_delete,
+        data.accounting_export,
+        data.accounting_approve,
+
+        data.hr_read,
+        data.hr_write,
+        data.hr_delete,
+        data.hr_export,
+        data.hr_approve,
+
+        data.inventory_read,
+        data.inventory_write,
+        data.inventory_delete,
+        data.inventory_export,
+        data.inventory_approve,
+
+        data.crm_read,
+        data.crm_write,
+        data.crm_delete,
+        data.crm_export,
+        data.crm_approve,
+
+        data.purchasing_read,
+        data.purchasing_write,
+        data.purchasing_delete,
+        data.purchasing_export,
+        data.purchasing_approve,
+
+        data.reports_read,
+        data.reports_write,
+        data.reports_delete,
+        data.reports_export,
+        data.reports_approve,
+
+        data.security_read,
+        data.security_write,
+        data.security_delete,
+        data.security_export,
+        data.security_approve
+      );
+
+      toast({ title: "Created", description: "Role created successfully!" });
+    }
+
+    setShowForm(false);
+    loadRoles();
+  } catch (error) {
+    console.error("Error saving role", error);
+    toast({
+      title: "Error",
+      description: "Failed to save role",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const filteredRoles = roles.filter(role => 
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    role.role_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     role.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getPermissionCount = (role: Role) => {
-    return role.permissions.reduce((count, perm) => {
-      return count + Object.values(perm).filter(val => typeof val === 'boolean' && val).length;
+  const getPermissionCount = (role: Role): number => {
+    const values = Object.values(role);
+    return values.filter(val => val === 1).length;
+};
+const getModulePermissionCount = (role: Role, module: string): number => {
+    // 1. Convert module name to the lowercase prefix (e.g., 'Sales' -> 'sales')
+    const prefix = module.toLowerCase();
+
+    // 2. Define the 5 standard actions
+    const actions = ['read', 'write', 'delete', 'export', 'approve'];
+
+    // 3. Calculate the count by summing up the values (0 or 1)
+    return actions.reduce((count, action) => {
+        const key = `${prefix}_${action}`;
+        
+        // Use type assertion to safely access the property value
+        const permissionValue = role[key as keyof Role]; 
+        
+        // If the value is 1, add it to the count. Otherwise, add 0.
+        // We ensure the value is treated as a number for safety.
+        return count + (Number(permissionValue) === 1 ? 1 : 0);
     }, 0);
-  };
+};
 
-  const handleDeleteRole = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    if (role?.isSystem) {
-      alert('System roles cannot be deleted');
-      return;
-    }
-    setRoles(roles.filter(r => r.id !== roleId));
-  };
-
+// Assuming max permissions per module is 5
+const MAX_PERMISSIONS = 5;
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Role Management</h2>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
+            <Button
+            onClick={handleAddRole}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Role</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="roleName">Role Name</Label>
-                  <Input id="roleName" placeholder="Enter role name" />
-                </div>
-                <div>
-                  <Label htmlFor="hierarchy">Hierarchy Level</Label>
-                  <Input id="hierarchy" type="number" placeholder="1-10" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" placeholder="Enter role description" />
-              </div>
-              
-              <div>
-                <Label>Permissions</Label>
-                <div className="mt-2 border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Module</TableHead>
-                        <TableHead className="text-center">Read</TableHead>
-                        <TableHead className="text-center">Write</TableHead>
-                        <TableHead className="text-center">Delete</TableHead>
-                        <TableHead className="text-center">Export</TableHead>
-                        <TableHead className="text-center">Approve</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {modules.map(module => (
-                        <TableRow key={module}>
-                          <TableCell className="font-medium">{module}</TableCell>
-                          {permissionTypes.map(permission => (
-                            <TableCell key={permission} className="text-center">
-                              <Checkbox />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+            </Button>                  
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-              <Button>Create Role</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
       <Card>
         <CardHeader>
@@ -198,103 +306,306 @@ const RoleManagement: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Role</TableHead>
-                    <TableHead>Hierarchy</TableHead>
-                    <TableHead>Users</TableHead>
                     <TableHead>Permissions</TableHead>
-                    <TableHead>Type</TableHead>
+                   
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRoles.map((role) => (
-                    <TableRow key={role.id}>
+                    <TableRow key={role.role_id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{role.name}</div>
+                          <div className="font-medium">{role.role_name}</div>
                           <div className="text-sm text-gray-500">{role.description}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">Level {role.hierarchy}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          <span>{role.userCount}</span>
-                        </div>
-                      </TableCell>
+                     
+                     
                       <TableCell>
                         <Badge variant="secondary">
                           {getPermissionCount(role)} permissions
                         </Badge>
                       </TableCell>
+                     
                       <TableCell>
-                        <Badge className={role.isSystem ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}>
-                          {role.isSystem ? 'System' : 'Custom'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {!role.isSystem && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleDeleteRole(role.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => handleEditRole(role)}>
+                      <Edit className="h-4 w-4" />
+                      </Button>
+                      
+                      
+                    </div>
+                    
+                  </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TabsContent>
             
-            <TabsContent value="matrix">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Role</TableHead>
-                      {modules.map(module => (
+        <TabsContent value="matrix">
+    <div className="overflow-x-auto">
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Role</TableHead>
+                    {/* Headers remain the same */}
+                    {modules.map(module => (
                         <TableHead key={module} className="text-center">{module}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRoles.map((role) => (
-                      <TableRow key={role.id}>
-                        <TableCell className="font-medium">{role.name}</TableCell>
-                        {modules.map(module => {
-                          const permission = role.permissions.find(p => p.module === module);
-                          const permCount = permission ? 
-                            Object.values(permission).filter(val => typeof val === 'boolean' && val).length : 0;
-                          return (
-                            <TableCell key={module} className="text-center">
-                              {permission ? (
-                                <Badge variant={permCount > 3 ? 'default' : permCount > 1 ? 'secondary' : 'outline'}>
-                                  {permCount}/5
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">0/5</Badge>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {/* NOTE: I've updated role.id to role.role_id and role.name to role.role_name 
+                  to align with the standard 'Role' interface used in previous answers.
+                  Please adjust role.role_id and role.role_name if your Role interface 
+                  still uses 'id' and 'name'.
+                */}
+                {filteredRoles.map((role) => (
+                    <TableRow key={role.role_id}>
+                        <TableCell className="font-medium">{role.role_name}</TableCell>
+                        
+                        {modules.map(module => {
+                            // 💡 Use the new helper function to calculate the granted permissions
+                            const grantedCount = getModulePermissionCount(role, module);
+                            const permCount = grantedCount; // Use grantedCount for clarity
+                            
+                            // 💡 Determine the Badge variant based on the count, matching your image style
+                            let variant: 'default' | 'secondary' | 'outline' = 'outline';
+                            if (permCount === MAX_PERMISSIONS) {
+                                variant = 'default'; // Blue background for 5/5
+                            } else if (permCount >= 1) {
+                                variant = 'secondary'; // Lighter background for partial access (1/5 to 4/5)
+                            }
+                            // If permCount is 0, it defaults to 'outline'
+                            
+                            return (
+                                <TableCell key={module} className="text-center">
+                                    <Badge variant={variant} className={permCount === 0 ? 'text-gray-400 border-gray-200' : ''}>
+                                        {permCount}/{MAX_PERMISSIONS}
+                                    </Badge>
+                                </TableCell>
+                            );
+                        })}
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </div>
+</TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+       {
+       showForm && (
+        <RoleForm 
+        role={editRole}
+         onClose={() => setShowForm(false)}
+          onSave={handleSaveRole}        
+        
+         />
+      )}
+    </div>
+  );
+};
+const actions = ["read", "write", "delete", "export", "approve"];
+const modules = ['sales', 'accounting', 'hr', 'inventory', 'crm', 'purchasing', 'reports', 'security'];
+const RoleForm: React.FC<{
+  role: Role | null;
+  onClose: () => void;
+  onSave: (data: Omit<Role, "role">) => void;
+}> = ({ role, onClose, onSave }) => {
+  const [role_name, setRoleName] = useState("");
+  const [description, setDescription] = useState("");
+ const [permissions, setPermissions] = useState<Record<string, 0 | 1>>({});
+
+  useEffect(() => {
+    if (role) {
+      setRoleName(role.role_name || "");
+      setDescription(role.description || "");
+
+      const loadedPermissions: Record<string, 0 | 1> = {};
+      modules.forEach((mod) => {
+  actions.forEach((act) => {
+   const key = `${mod.toLowerCase()}_${act}`;
+   role[key as keyof Role];
+const value = role[key as keyof Role];
+loadedPermissions[key] = value === 1 ? 1 : 0;
+  });
+});
+
+      setPermissions(loadedPermissions);
+    } else {
+      // Default permissions to 0
+      const initialPermissions: Record<string, 0 | 1> = {};
+      modules.forEach((mod) =>
+        actions.forEach((act) => {
+          initialPermissions[`${mod}_${act}`] = 0;
+        })
+      );
+      setPermissions(initialPermissions);
+    }
+  }, [role]);
+
+   const togglePermission = (key: string) => {
+    setPermissions((prev) => ({
+      ...prev,
+      [key]: prev[key] === 1 ? 0 : 1,
+    }));
+  };
+
+
+ const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!role_name || !description) {
+      alert("Please fill all fields.");
+      return;
+    }
+
+    
+    const permissionFields: Partial<Role> = {};
+    modules.forEach((mod) =>
+      actions.forEach((act) => {
+        const key = `${mod.toLowerCase()}_${act}`;
+       
+        permissionFields[key] = permissions[key] ?? 0;
+      })
+    );
+
+    const payload: Omit<Role, "role"> = {
+      role_id: role?.role_id ?? null,
+      role_name,
+      description,
+      created_by: role?.created_by ?? 1,
+      updated_by: role ? 1 : null,
+      // Permissions
+      sales_read: permissionFields.sales_read ?? 0,
+      sales_write: permissionFields.sales_write ?? 0,
+      sales_delete: permissionFields.sales_delete ?? 0,
+      sales_export: permissionFields.sales_export ?? 0,
+      sales_approve: permissionFields.sales_approve ?? 0,
+
+      accounting_read: permissionFields.accounting_read ?? 0,
+      accounting_write: permissionFields.accounting_write ?? 0,
+      accounting_delete: permissionFields.accounting_delete ?? 0,
+      accounting_export: permissionFields.accounting_export ?? 0,
+      accounting_approve: permissionFields.accounting_approve ?? 0,
+
+      hr_read: permissionFields.hr_read ?? 0,
+      hr_write: permissionFields.hr_write ?? 0,
+      hr_delete: permissionFields.hr_delete ?? 0,
+      hr_export: permissionFields.hr_export ?? 0,
+      hr_approve: permissionFields.hr_approve ?? 0,
+
+      inventory_read: permissionFields.inventory_read ?? 0,
+      inventory_write: permissionFields.inventory_write ?? 0,
+      inventory_delete: permissionFields.inventory_delete ?? 0,
+      inventory_export: permissionFields.inventory_export ?? 0,
+      inventory_approve: permissionFields.inventory_approve ?? 0,
+
+      crm_read: permissionFields.crm_read ?? 0,
+      crm_write: permissionFields.crm_write ?? 0,
+      crm_delete: permissionFields.crm_delete ?? 0,
+      crm_export: permissionFields.crm_export ?? 0,
+      crm_approve: permissionFields.crm_approve ?? 0,
+
+      purchasing_read: permissionFields.purchasing_read ?? 0,
+      purchasing_write: permissionFields.purchasing_write ?? 0,
+      purchasing_delete: permissionFields.purchasing_delete ?? 0,
+      purchasing_export: permissionFields.purchasing_export ?? 0,
+      purchasing_approve: permissionFields.purchasing_approve ?? 0,
+
+      reports_read: permissionFields.reports_read ?? 0,
+      reports_write: permissionFields.reports_write ?? 0,
+      reports_delete: permissionFields.reports_delete ?? 0,
+      reports_export: permissionFields.reports_export ?? 0,
+      reports_approve: permissionFields.reports_approve ?? 0,
+
+      security_read: permissionFields.security_read ?? 0,
+      security_write: permissionFields.security_write ?? 0,
+      security_delete: permissionFields.security_delete ?? 0,
+      security_export: permissionFields.security_export ?? 0,
+      security_approve: permissionFields.security_approve ?? 0,
+    };
+
+    onSave(payload);
+  };
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-[900px] max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-semibold mb-4">
+          {role ? "Edit Role" : "Add Role"}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username and Email */}
+          <div className="flex space-x-4">
+             <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Role Name</span>
+          <Input
+            value={role_name}
+            onChange={(e) => setRoleName(e.target.value)}
+            placeholder="Role Name"
+          />
+          </div>
+          <div className="flex flex-col flex-1">
+          <span className="text-sm font-medium text-gray-700">Description</span>
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description"
+          />
+          </div>
+          </div>
+          {/* Permissions Grid */}
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold mb-2">Permissions</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full border text-sm text-center">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1 text-left">Module</th>
+                    {actions.map((action) => (
+                      <th key={action} className="border px-2 py-1 capitalize">
+                        {action}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                 {modules.map((module) => (
+  <tr key={module}>
+    <td className="border px-2 py-1 text-left capitalize">
+      {module}
+    </td>
+    {actions.map((action) => {
+      const key = `${module.toLowerCase()}_${action}`;   // FIX HERE
+      return (
+        <td key={key} className="border px-2 py-1">
+          <input
+            type="checkbox"
+            checked={permissions[key] === 1}
+            onChange={() => togglePermission(key)}
+          />
+        </td>
+      );
+    })}
+  </tr>
+))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+           <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" onClick={onClose}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="flex-2 bg-gradient-to-r from-blue-500 to-blue-600">
+                        Save
+                      </Button>
+                    </div>
+        </form>
+      </div>
     </div>
   );
 };
