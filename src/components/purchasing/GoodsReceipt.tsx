@@ -165,7 +165,17 @@ const GoodsReceipt: React.FC = () => {
                   <TableCell>{grn.grn_id}</TableCell>
                   <TableCell>{grn.po_id}</TableCell>
                    <TableCell>{grn.vendor_name}</TableCell>
-                  <TableCell>{grn.created_date}</TableCell>
+                  <TableCell>{new Date(grn.created_date).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}</TableCell>
                   <TableCell>{grn.created_by}</TableCell>
                   <TableCell>
                     <Badge variant={grn.status === 'Completed' ? 'default' : 'secondary'}>

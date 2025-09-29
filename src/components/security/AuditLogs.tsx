@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,88 +8,39 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Download, Search, Shield, User, Database } from 'lucide-react';
+import { getAuditDetail } from '@/api/getAuditDetail';
 
 interface AuditLog {
-  id: string;
-  timestamp: string;
-  userId: string;
+  log_id: number;
+  log_time: Date;
+  user_id: number;
   username: string;
   action: string;
   module: string;
-  objectType: string;
-  objectId: string;
-  ipAddress: string;
+  object: string;
+ 
+  ip_address: string;
   details: string;
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Success' | 'Failed' | 'Warning';
+  severity: string;
+  status: string ;
 }
 
 const AuditLogs: React.FC = () => {
-  const [auditLogs] = useState<AuditLog[]>([
-    {
-      id: '1',
-      timestamp: '2024-01-15 10:30:15',
-      userId: '1',
-      username: 'admin',
-      action: 'LOGIN',
-      module: 'Authentication',
-      objectType: 'Session',
-      objectId: 'sess_123',
-      ipAddress: '192.168.1.100',
-      details: 'Successful login with MFA',
-      severity: 'Low',
-      status: 'Success'
-    },
-    {
-      id: '2',
-      timestamp: '2024-01-15 10:25:30',
-      userId: '2',
-      username: 'john.doe',
-      action: 'CREATE',
-      module: 'Sales',
-      objectType: 'Invoice',
-      objectId: 'INV-2024-001',
-      ipAddress: '192.168.1.101',
-      details: 'Created new invoice for customer ABC Corp',
-      severity: 'Medium',
-      status: 'Success'
-    },
-    {
-      id: '3',
-      timestamp: '2024-01-15 10:20:45',
-      userId: '3',
-      username: 'jane.smith',
-      action: 'FAILED_LOGIN',
-      module: 'Authentication',
-      objectType: 'Session',
-      objectId: 'sess_124',
-      ipAddress: '203.0.113.1',
-      details: 'Failed login attempt - invalid password',
-      severity: 'High',
-      status: 'Failed'
-    }
-  ]);
+const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterModule, setFilterModule] = useState('all');
-  const [filterAction, setFilterAction] = useState('all');
-  const [filterSeverity, setFilterSeverity] = useState('all');
-
-  const modules = ['Authentication', 'Sales', 'Accounting', 'HR', 'Inventory', 'CRM', 'Purchasing', 'Reports', 'Security'];
-  const actions = ['LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'APPROVE', 'ROLE_ASSIGN', 'FAILED_LOGIN'];
-  const severities = ['Low', 'Medium', 'High', 'Critical'];
-
-  const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.details.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesModule = filterModule === 'all' || log.module === filterModule;
-    const matchesAction = filterAction === 'all' || log.action === filterAction;
-    const matchesSeverity = filterSeverity === 'all' || log.severity === filterSeverity;
-    
-    return matchesSearch && matchesModule && matchesAction && matchesSeverity;
-  });
-
+  
+const loadDetail = async () => {
+       try {
+         const res = await getAuditDetail();
+         setAuditLogs(res);console.log(auditLogs);
+       } catch (error) {
+         console.error("Error loading users", error);
+       }
+     };
+     useEffect(() => {
+       loadDetail();
+     }, []);
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'Low': return 'bg-green-100 text-green-800';
@@ -136,7 +87,7 @@ const AuditLogs: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Audit Trail ({filteredLogs.length} records)
+            Audit Trail 
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -154,48 +105,9 @@ const AuditLogs: React.FC = () => {
                   />
                 </div>
               </div>
-              <div>
-                <Label>Module</Label>
-                <Select value={filterModule} onValueChange={setFilterModule}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Modules</SelectItem>
-                    {modules.map(module => (
-                      <SelectItem key={module} value={module}>{module}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Action</Label>
-                <Select value={filterAction} onValueChange={setFilterAction}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Actions</SelectItem>
-                    {actions.map(action => (
-                      <SelectItem key={action} value={action}>{action}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Severity</Label>
-                <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Severities</SelectItem>
-                    {severities.map(severity => (
-                      <SelectItem key={severity} value={severity}>{severity}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              
+             
+            
             </div>
 
             <div className="border rounded-lg">
@@ -214,17 +126,27 @@ const AuditLogs: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLogs.map((log) => (
-                    <TableRow key={log.id}>
+                  {auditLogs.map((log) => (
+                    <TableRow key={log.log_id}>
                       <TableCell className="font-mono text-sm">
-                        {log.timestamp}
+                        {new Date(log.log_time).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4" />
                           <div>
                             <div className="font-medium">{log.username}</div>
-                            <div className="text-xs text-gray-500">ID: {log.userId}</div>
+                            <div className="text-xs text-gray-500">ID: {log.user_id}</div>
                           </div>
                         </div>
                       </TableCell>
@@ -239,12 +161,12 @@ const AuditLogs: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">{log.objectType}</div>
-                          <div className="text-gray-500">{log.objectId}</div>
+                          <div className="font-medium">{log.object}</div>
+                          
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {log.ipAddress}
+                        {log.ip_address}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(log.status)}>

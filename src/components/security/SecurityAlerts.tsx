@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,99 +8,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Shield, Settings, Eye, Lock } from 'lucide-react';
+import { getAuditDetail } from '@/api/getAuditDetail';
 
 interface SecurityAlert {
-  id: string;
-  type: 'Failed Login' | 'Suspicious Location' | 'New Device';
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  timestamp: string;
-  userId: string;
+  log_id: number;
+  log_time: Date;
+  user_id: number;
   username: string;
-  description: string;
-  ipAddress: string;
-  location: string;
-  status: 'Active' | 'Acknowledged' | 'Resolved';
+  action: string;
+  module: string;
+  object: string;
+  ip_address: string;
+  details: string;
+  severity: string;
+  failed_attempts:number;
+  status: string ;
+ 
 }
 
-interface AlertRule {
-  id: string;
-  name: string;
-  type: string;
-  enabled: boolean;
-  threshold: number;
-  timeWindow: number;
-  action: string;
-}
 
 const SecurityAlerts: React.FC = () => {
-  const [alerts] = useState<SecurityAlert[]>([
-    {
-      id: '1',
-      type: 'Failed Login',
-      severity: 'High',
-      timestamp: '2024-01-15 10:45:30',
-      userId: '3',
-      username: 'jane.smith',
-      description: '5 consecutive failed login attempts',
-      ipAddress: '203.0.113.1',
-      location: 'Unknown Location',
-      status: 'Active'
-    },
-    {
-      id: '2',
-      type: 'Suspicious Location',
-      severity: 'Medium',
-      timestamp: '2024-01-15 09:30:15',
-      userId: '2',
-      username: 'john.doe',
-      description: 'Login from new geographic location',
-      ipAddress: '198.51.100.1',
-      location: 'New York, US',
-      status: 'Acknowledged'
-    },
-    {
-      id: '3',
-      type: 'New Device',
-      severity: 'Low',
-      timestamp: '2024-01-15 08:15:45',
-      userId: '4',
-      username: 'mike.wilson',
-      description: 'Login from unrecognized device',
-      ipAddress: '192.168.1.150',
-      location: 'Office Network',
-      status: 'Resolved'
-    }
-  ]);
-
-  const [alertRules, setAlertRules] = useState<AlertRule[]>([
-    {
-      id: '1',
-      name: 'Failed Login Attempts',
-      type: 'Failed Login',
-      enabled: true,
-      threshold: 5,
-      timeWindow: 15,
-      action: 'Lock Account'
-    },
-    {
-      id: '2',
-      name: 'Suspicious Location',
-      type: 'Location',
-      enabled: true,
-      threshold: 1,
-      timeWindow: 60,
-      action: 'Notify User'
-    },
-    {
-      id: '3',
-      name: 'New Device Detection',
-      type: 'Device',
-      enabled: true,
-      threshold: 1,
-      timeWindow: 1,
-      action: 'Require Verification'
-    }
-  ]);
+  const [alerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
+  const loadDetail = async () => {
+         try {
+           const res = await getAuditDetail();
+           setSecurityAlerts(res);
+           console.log(alerts);
+         } catch (error) {
+           console.error("Error loading users", error);
+         }
+       };
+       useEffect(() => {
+         loadDetail();
+       }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('all');
@@ -110,12 +50,11 @@ const SecurityAlerts: React.FC = () => {
   const statuses = ['Active', 'Acknowledged', 'Resolved'];
 
   const filteredAlerts = alerts.filter(alert => {
-    const matchesSearch = alert.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         alert.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = alert.username.toLowerCase().includes(searchTerm.toLowerCase()) ;
     const matchesSeverity = filterSeverity === 'all' || alert.severity === filterSeverity;
     const matchesStatus = filterStatus === 'all' || alert.status === filterStatus;
-    
-    return matchesSearch && matchesSeverity && matchesStatus;
+    const isFailed = alert.status === 'Failed';
+  return matchesSearch && matchesSeverity && matchesStatus && isFailed;
   });
 
   const getSeverityColor = (severity: string) => {
@@ -146,11 +85,6 @@ const SecurityAlerts: React.FC = () => {
     }
   };
 
-  const toggleAlertRule = (ruleId: string) => {
-    setAlertRules(alertRules.map(rule => 
-      rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
-    ));
-  };
 
   const activeAlertsCount = alerts.filter(alert => alert.status === 'Active').length;
   const criticalAlertsCount = alerts.filter(alert => alert.severity === 'Critical').length;
@@ -169,13 +103,9 @@ const SecurityAlerts: React.FC = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="alerts" className="w-full">
-        <TabsList>
-          <TabsTrigger value="alerts">Active Alerts</TabsTrigger>
-          <TabsTrigger value="rules">Alert Rules</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="alerts">
+     
+        
+        
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -221,7 +151,7 @@ const SecurityAlerts: React.FC = () => {
                   <TableRow>
                     <TableHead>Alert</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead>IP Address</TableHead>
                     <TableHead>Severity</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Timestamp</TableHead>
@@ -229,26 +159,26 @@ const SecurityAlerts: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredAlerts.map((alert) => (
-                    <TableRow key={alert.id}>
+                    <TableRow key={alert.user_id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getTypeIcon(alert.type)}
+                          {getTypeIcon(alert.action)}
                           <div>
-                            <div className="font-medium">{alert.type}</div>
-                            <div className="text-sm text-gray-500">{alert.description}</div>
+                            <div className="font-medium">{alert.action}</div>
+                            <div className="text-sm text-gray-500">{alert.failed_attempts}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{alert.username}</div>
-                          <div className="text-sm text-gray-500">ID: {alert.userId}</div>
+                          <div className="text-sm text-gray-500">ID: {alert.user_id}</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="text-sm">{alert.location}</div>
-                          <div className="text-xs text-gray-500">{alert.ipAddress}</div>
+                          
+                          <div className="text-xs text-gray-500">{alert.ip_address}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -262,7 +192,17 @@ const SecurityAlerts: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {alert.timestamp}
+                       {new Date(alert.log_time ).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -270,56 +210,10 @@ const SecurityAlerts: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
+       
 
-        <TabsContent value="rules">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Alert Rules Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rule Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Threshold</TableHead>
-                    <TableHead>Time Window</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Toggle</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {alertRules.map((rule) => (
-                    <TableRow key={rule.id}>
-                      <TableCell className="font-medium">{rule.name}</TableCell>
-                      <TableCell>{rule.type}</TableCell>
-                      <TableCell>{rule.threshold}</TableCell>
-                      <TableCell>{rule.timeWindow} min</TableCell>
-                      <TableCell>{rule.action}</TableCell>
-                      <TableCell>
-                        <Badge className={rule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {rule.enabled ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={rule.enabled}
-                          onCheckedChange={() => toggleAlertRule(rule.id)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+       
+    
     </div>
   );
 };

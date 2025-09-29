@@ -51,12 +51,12 @@ const SecurityModule: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="roles">Roles</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
-          <TabsTrigger value="auth">Authentication</TabsTrigger>
+        {/*  <TabsTrigger value="auth">Authentication</TabsTrigger> */}
           <TabsTrigger value="alerts">Security Alerts</TabsTrigger>
         </TabsList>
 

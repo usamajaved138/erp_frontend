@@ -265,6 +265,7 @@ const handleUserLock = async (userId: number) => {
                 <TableHead>Department</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Creation Date</TableHead>
                  {/* 
                 <TableHead>MFA</TableHead>
                 */}
@@ -300,6 +301,19 @@ const handleUserLock = async (userId: number) => {
                     <Badge className={getStatusColor(user.status)}>
                       {user.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                     {new Date(user.creation_date ).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}
                   </TableCell>
                  
                  {/*

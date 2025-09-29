@@ -213,7 +213,19 @@ const handleEditPR = (pr: PR) => {
                   <TableCell className="font-medium">{pr.pr_id}</TableCell>
                   <TableCell>{pr.item_name}</TableCell>
                   <TableCell>{pr.dep_name}</TableCell>
-                  <TableCell>{pr.created_date}</TableCell>
+                  <TableCell>
+                 {new Date(pr.created_date).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}
+                  </TableCell>
                  <TableCell>{pr.qty}</TableCell>
                  <TableCell>{pr.remarks}</TableCell>
                   <TableCell>{pr.status}</TableCell>

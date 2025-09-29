@@ -152,7 +152,17 @@ const handleSavePO = async (payload: { vendor_id: number; items: POItem[] }) => 
                 <TableRow key={po.po_id}>
                   <TableCell className="font-medium">{po.po_id}</TableCell>
                   <TableCell>{po.vendor_name}</TableCell>
-                  <TableCell>{po.order_date}</TableCell>
+                  <TableCell>{new Date(po.order_date).toLocaleString('en-PK',
+                         {
+                            timeZone: 'Asia/Karachi',
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}</TableCell>
                   <TableCell>{po.total_price}</TableCell>
                   <TableCell>{po.status}</TableCell>
                   
